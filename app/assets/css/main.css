@@ -1,0 +1,255 @@
+/* Tailwind v4 — usar @import, não @tailwind directives */
+@import 'tailwindcss';
+
+/* Garantir que Tailwind escaneie todas as layers e app do projeto */
+@source "../../../layers";
+@source "../..";
+
+/* Tokens centralizados (CSS custom properties) */
+@import './tokens.css';
+
+/* Tokens Zima Blue — Design System do SaaS de gestão */
+@import './tokens-zima.css';
+
+/* === MAPEAMENTO DOS TOKENS PARA O SISTEMA TAILWIND v4 ===
+   Ao adicionar novo token em tokens.css, mapear aqui também.
+   Referência: docs/design-tokens.md
+*/
+@theme {
+  /* Cores primárias */
+  --color-primary-50:  var(--cuidados-primary-50);
+  --color-primary-100: var(--cuidados-primary-100);
+  --color-primary-200: var(--cuidados-primary-200);
+  --color-primary-300: var(--cuidados-primary-300);
+  --color-primary-400: var(--cuidados-primary-400);
+  --color-primary-500: var(--cuidados-primary-500);
+  --color-primary-600: var(--cuidados-primary-600);
+  --color-primary-700: var(--cuidados-primary-700);
+  --color-primary-800: var(--cuidados-primary-800);
+  --color-primary-900: var(--cuidados-primary-900);
+
+  /* Cores secundárias */
+  --color-secondary-50:  var(--cuidados-secondary-50);
+  --color-secondary-100: var(--cuidados-secondary-100);
+  --color-secondary-500: var(--cuidados-secondary-500);
+  --color-secondary-600: var(--cuidados-secondary-600);
+  --color-secondary-700: var(--cuidados-secondary-700);
+
+  /* Cores semânticas */
+  --color-success-50:  var(--cuidados-success-50);
+  --color-success-500: var(--cuidados-success-500);
+  --color-success-700: var(--cuidados-success-700);
+  --color-warning-50:  var(--cuidados-warning-50);
+  --color-warning-500: var(--cuidados-warning-500);
+  --color-warning-700: var(--cuidados-warning-700);
+  --color-danger-50:   var(--cuidados-danger-50);
+  --color-danger-500:  var(--cuidados-danger-500);
+  --color-danger-700:  var(--cuidados-danger-700);
+
+  /* Neutras */
+  --color-neutral-50:  var(--cuidados-neutral-50);
+  --color-neutral-100: var(--cuidados-neutral-100);
+  --color-neutral-200: var(--cuidados-neutral-200);
+  --color-neutral-300: var(--cuidados-neutral-300);
+  --color-neutral-400: var(--cuidados-neutral-400);
+  --color-neutral-500: var(--cuidados-neutral-500);
+  --color-neutral-600: var(--cuidados-neutral-600);
+  --color-neutral-700: var(--cuidados-neutral-700);
+  --color-neutral-800: var(--cuidados-neutral-800);
+  --color-neutral-900: var(--cuidados-neutral-900);
+
+  /* Tipografia */
+  --font-sans:    var(--cuidados-font-sans);
+  --font-heading: var(--cuidados-font-heading);
+  --font-mono:    var(--cuidados-font-mono);
+
+  /* Sombras */
+  --shadow-sm:    var(--cuidados-shadow-sm);
+  --shadow-card:  var(--cuidados-shadow-card);
+  --shadow-md:    var(--cuidados-shadow-md);
+  --shadow-modal: var(--cuidados-shadow-modal);
+
+  /* Border radius */
+  --radius-sm:   var(--cuidados-radius-sm);
+  --radius-md:   var(--cuidados-radius-md);
+  --radius-lg:   var(--cuidados-radius-lg);
+  --radius-xl:   var(--cuidados-radius-xl);
+  --radius-full: var(--cuidados-radius-full);
+
+  /* ======================================================
+     ZIMA BLUE — Tokens mapeados para classes Tailwind
+     Prefixo: zima-* para não conflitar com tokens Cuidados
+     ====================================================== */
+
+  /* Backgrounds */
+  --color-zima-base:           var(--zima-bg-base);
+  --color-zima-surface-1:      var(--zima-bg-surface-1);
+  --color-zima-surface-2:      var(--zima-bg-surface-2);
+  --color-zima-surface-3:      var(--zima-bg-surface-3);
+  --color-zima-surface-hover:  var(--zima-bg-surface-hover);
+  --color-zima-surface-active: var(--zima-bg-surface-active);
+
+  /* Zima Blue accent */
+  --color-zima-blue:           var(--zima-blue-core);
+  --color-zima-blue-light:     var(--zima-blue-light);
+  --color-zima-blue-pale:      var(--zima-blue-pale);
+  --color-zima-blue-intense:   var(--zima-blue-intense);
+  --color-zima-blue-50:        var(--zima-blue-50);
+  --color-zima-blue-100:       var(--zima-blue-100);
+  --color-zima-blue-200:       var(--zima-blue-200);
+  --color-zima-blue-300:       var(--zima-blue-300);
+  --color-zima-blue-400:       var(--zima-blue-400);
+  --color-zima-blue-500:       var(--zima-blue-500);
+  --color-zima-blue-600:       var(--zima-blue-600);
+  --color-zima-blue-700:       var(--zima-blue-700);
+  --color-zima-blue-800:       var(--zima-blue-800);
+  --color-zima-blue-900:       var(--zima-blue-900);
+  --color-zima-blue-950:       var(--zima-blue-950);
+
+  /* Semânticas Zima */
+  --color-zima-success: var(--zima-success);
+  --color-zima-warning: var(--zima-warning);
+  --color-zima-danger:  var(--zima-danger);
+  --color-zima-info:    var(--zima-info);
+
+  /* Texto Zima */
+  --color-zima-text:           var(--zima-text-primary);
+  --color-zima-text-secondary: var(--zima-text-secondary);
+  --color-zima-text-muted:     var(--zima-text-muted);
+  --color-zima-text-disabled:  var(--zima-text-disabled);
+
+  /* Sombras Zima */
+  --shadow-zima-sm:       var(--zima-shadow-sm);
+  --shadow-zima-md:       var(--zima-shadow-md);
+  --shadow-zima-lg:       var(--zima-shadow-lg);
+  --shadow-zima-dropdown: var(--zima-shadow-dropdown);
+  --shadow-zima-modal:    var(--zima-shadow-modal);
+}
+
+/* === ANIMAÇÕES GLOBAIS ZIMA === */
+@keyframes zima-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes zima-slide-in-right {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes zima-slide-out-right {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(120%); opacity: 0; }
+}
+
+@keyframes zima-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes zima-scale-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* === SCROLLBAR PADRÃO ZIMA BLUE ===
+   Aplica scrollbar fina e discreta em todos os elementos scrolláveis do SaaS.
+   Padrão: largura 4px, cor var(--zima-border-default), trilho transparente.
+   Para ocultar completamente: usar classe .hide-scrollbar
+*/
+@layer base {
+  /* Scrollbar fina e discreta — padrão do design system */
+  .zima-scroll,
+  .overflow-y-auto,
+  .overflow-x-auto,
+  [style*="overflow-y: auto"],
+  [style*="overflow-y:auto"],
+  [style*="overflow: auto"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--zima-border-default) transparent;
+  }
+
+  /* Webkit (Chrome, Edge, Safari) */
+  .zima-scroll::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar,
+  [style*="overflow-y: auto"]::-webkit-scrollbar,
+  [style*="overflow-y:auto"]::-webkit-scrollbar,
+  [style*="overflow: auto"]::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .zima-scroll::-webkit-scrollbar-track,
+  .overflow-y-auto::-webkit-scrollbar-track,
+  .overflow-x-auto::-webkit-scrollbar-track,
+  [style*="overflow-y: auto"]::-webkit-scrollbar-track,
+  [style*="overflow-y:auto"]::-webkit-scrollbar-track,
+  [style*="overflow: auto"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .zima-scroll::-webkit-scrollbar-thumb,
+  .overflow-y-auto::-webkit-scrollbar-thumb,
+  .overflow-x-auto::-webkit-scrollbar-thumb,
+  [style*="overflow-y: auto"]::-webkit-scrollbar-thumb,
+  [style*="overflow-y:auto"]::-webkit-scrollbar-thumb,
+  [style*="overflow: auto"]::-webkit-scrollbar-thumb {
+    background: var(--zima-border-default);
+    border-radius: 9999px;
+  }
+
+  .zima-scroll::-webkit-scrollbar-thumb:hover,
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+  [style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover,
+  [style*="overflow-y:auto"]::-webkit-scrollbar-thumb:hover,
+  [style*="overflow: auto"]::-webkit-scrollbar-thumb:hover {
+    background: var(--zima-text-muted);
+  }
+
+  /* Scrollbar invisível (tab bars, listas horizontais) */
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* === ESTILOS BASE GLOBAIS === */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  /* Transições de página */
+  .page-enter-active,
+  .page-leave-active {
+    transition: opacity 0.2s ease;
+  }
+
+  .page-enter-from,
+  .page-leave-to {
+    opacity: 0;
+  }
+
+  /* Transições de layout */
+  .layout-enter-active,
+  .layout-leave-active {
+    transition: opacity 0.15s ease;
+  }
+
+  .layout-enter-from,
+  .layout-leave-to {
+    opacity: 0;
+  }
+}

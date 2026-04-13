@@ -1,0 +1,189 @@
+/* ============================================================
+   DESIGN TOKENS — ZIMA BLUE BUSINESS
+   Sistema de design para a plataforma SaaS de gestão
+   de negócios de cuidados pessoais, beleza e petshops.
+
+   Paleta: "Zima Blue" — dark mode enterprise-grade
+   Referência visual: Linear App, Vercel Dashboard, Stripe
+   ============================================================ */
+
+:root {
+  /* ======================================================
+     BACKGROUNDS — Camadas de profundidade
+     Hierarquia de superfícies do mais escuro ao mais claro
+     ====================================================== */
+  --zima-bg-base:           #07090E; /* App background — deep space */
+  --zima-bg-surface-1:      #0C1017; /* Sidebar, panels */
+  --zima-bg-surface-2:      #111520; /* Cards, containers */
+  --zima-bg-surface-3:      #161B28; /* Dropdowns, modals */
+  --zima-bg-surface-hover:  #1A2030; /* Hover states */
+  --zima-bg-surface-active: #1E2538; /* Active/selected states */
+
+  /* ======================================================
+     ZIMA BLUE — Accent primário
+     O coração visual da marca
+     ====================================================== */
+  --zima-blue-core:    #3B82F6; /* Azul vibrante — ações primárias */
+  --zima-blue-light:   #60A5FA; /* Hover states, ícones ativos */
+  --zima-blue-pale:    #93C5FD; /* Textos de destaque, labels ativos */
+  --zima-blue-glow:    rgba(59, 130, 246, 0.15); /* Badge backgrounds */
+  --zima-blue-intense: #2563EB; /* Botões pressed, active states */
+  --zima-blue-subtle:  rgba(59, 130, 246, 0.08); /* Selected row bg */
+  --zima-blue-hover-row: rgba(59, 130, 246, 0.04); /* Table row hover */
+
+  /* Escala completa 50–950 */
+  --zima-blue-50:  #EFF6FF;
+  --zima-blue-100: #DBEAFE;
+  --zima-blue-200: #BFDBFE;
+  --zima-blue-300: #93C5FD;
+  --zima-blue-400: #60A5FA;
+  --zima-blue-500: #3B82F6; /* base */
+  --zima-blue-600: #2563EB;
+  --zima-blue-700: #1D4ED8;
+  --zima-blue-800: #1E40AF;
+  --zima-blue-900: #1E3A8A;
+  --zima-blue-950: #172554;
+
+  /* ======================================================
+     SEMÂNTICAS — Status e feedback
+     ====================================================== */
+  --zima-success:        #10B981; /* Verde esmeralda — confirmado, pago */
+  --zima-success-subtle: rgba(16, 185, 129, 0.1);
+  --zima-success-border: rgba(16, 185, 129, 0.2);
+
+  --zima-warning:        #F59E0B; /* Âmbar — pendente, atenção */
+  --zima-warning-subtle: rgba(245, 158, 11, 0.1);
+  --zima-warning-border: rgba(245, 158, 11, 0.2);
+
+  --zima-danger:        #EF4444; /* Vermelho — cancelado, erro, vencido */
+  --zima-danger-subtle: rgba(239, 68, 68, 0.1);
+  --zima-danger-border: rgba(239, 68, 68, 0.2);
+
+  --zima-info:        #6366F1; /* Índigo — informativo, dica */
+  --zima-info-subtle: rgba(99, 102, 241, 0.1);
+  --zima-info-border: rgba(99, 102, 241, 0.2);
+
+  /* ======================================================
+     TEXTO — Hierarquia rigorosa
+     ====================================================== */
+  --zima-text-primary:   #F1F5F9; /* Títulos, valores, dados importantes */
+  --zima-text-secondary: #94A3B8; /* Labels, descrições, apoio */
+  --zima-text-muted:     #64748B; /* Placeholders, timestamps, metadata */
+  --zima-text-disabled:  #475569; /* Estados desabilitados */
+  --zima-text-inverse:   #07090E; /* Texto sobre fundo claro */
+
+  /* ======================================================
+     BORDAS E DIVISORES
+     ====================================================== */
+  --zima-border-default:  rgba(148, 163, 184, 0.08);  /* Estrutural, quase invisível */
+  --zima-border-hover:    rgba(148, 163, 184, 0.15);  /* Hover/focus */
+  --zima-border-active:   rgba(59, 130, 246, 0.30);   /* Active/selected — azul sutil */
+  --zima-border-divider:  rgba(148, 163, 184, 0.06);  /* Divisores horizontais */
+  --zima-border-modal:    rgba(148, 163, 184, 0.10);  /* Bordas de modais */
+
+  /* ======================================================
+     BORDER RADIUS — Contido e profissional
+     ====================================================== */
+  --zima-radius-xs:   4px;    /* Badges, tags */
+  --zima-radius-sm:   6px;    /* Inputs, buttons */
+  --zima-radius-md:   8px;    /* Cards, containers */
+  --zima-radius-lg:   12px;   /* Modais, drawers */
+  --zima-radius-xl:   16px;   /* Painéis grandes */
+  --zima-radius-full: 9999px; /* Avatares, dots de status */
+
+  /* ======================================================
+     SOMBRAS — Mínimas e funcionais
+     ====================================================== */
+  --zima-shadow-sm:     0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --zima-shadow-md:     0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --zima-shadow-lg:     0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --zima-shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --zima-shadow-modal:  0 20px 40px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4);
+
+  /* ======================================================
+     TIPOGRAFIA — Corporate & Technical
+     ====================================================== */
+  --zima-font-display: 'Geist', 'Instrument Sans', 'Manrope', system-ui, sans-serif;
+  --zima-font-body:    'Geist Sans', 'DM Sans', system-ui, sans-serif;
+  --zima-font-mono:    'Geist Mono', 'IBM Plex Mono', 'JetBrains Mono', monospace;
+
+  /* Escala tipográfica */
+  --zima-text-display: 32px;
+  --zima-text-h1:      24px;
+  --zima-text-h2:      20px;
+  --zima-text-h3:      16px;
+  --zima-text-body:    14px;
+  --zima-text-small:   12px;
+  --zima-text-micro:   11px;
+
+  /* ======================================================
+     DIMENSÕES DE LAYOUT
+     ====================================================== */
+  --zima-sidebar-width:          240px;
+  --zima-sidebar-width-collapsed: 64px;
+  --zima-topbar-height:          56px;
+  --zima-content-max-width:      1280px;
+  --zima-content-padding:        24px;
+
+  /* ======================================================
+     TRANSIÇÕES — Curtas e profissionais
+     ====================================================== */
+  --zima-duration-fast:   100ms;
+  --zima-duration-base:   150ms;
+  --zima-duration-medium: 200ms;
+  --zima-duration-slow:   300ms;
+  --zima-ease-default:    cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ======================================================
+     Z-INDEX — Hierarquia de camadas
+     ====================================================== */
+  --zima-z-sidebar:   200;
+  --zima-z-topbar:    300;
+  --zima-z-dropdown:  400;
+  --zima-z-overlay:   500;
+  --zima-z-modal:          600;
+  --zima-z-modal-elevated: 650; /* Modais abertos dentro de drawers */
+  --zima-z-toast:          700;
+  --zima-z-command:        800;
+
+  /* ======================================================
+     GRADIENTES
+     ====================================================== */
+  --zima-gradient-primary: linear-gradient(135deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
+  --zima-gradient-subtle:  linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+  --zima-gradient-chart:   linear-gradient(180deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
+
+  /* ======================================================
+     TABELAS — Alta densidade
+     ====================================================== */
+  --zima-table-row-height:        48px;
+  --zima-table-header-height:     40px;
+  --zima-table-header-bg:         #0C1017;
+  --zima-table-row-hover:         rgba(59, 130, 246, 0.04);
+  --zima-table-row-selected:      rgba(59, 130, 246, 0.08);
+  --zima-table-border:            rgba(148, 163, 184, 0.06);
+
+  /* ======================================================
+     COMPONENTES ESPECÍFICOS
+     ====================================================== */
+  /* Sidebar item active */
+  --zima-sidebar-item-active-bg:     rgba(59, 130, 246, 0.10);
+  --zima-sidebar-item-active-border: #3B82F6;
+  --zima-sidebar-item-active-color:  #60A5FA;
+
+  /* Focus ring */
+  --zima-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.30);
+  --zima-focus-outline: rgba(59, 130, 246, 0.50);
+
+  /* Avatar fallback */
+  --zima-avatar-fallback-bg:    rgba(59, 130, 246, 0.15);
+  --zima-avatar-fallback-color: #60A5FA;
+
+  /* Skeleton shimmer */
+  --zima-skeleton-base:     #1A2030;
+  --zima-skeleton-shine:    #252D3D;
+
+  /* Notification badge */
+  --zima-badge-danger-bg:    #EF4444;
+  --zima-badge-danger-color: #FFFFFF;
+}

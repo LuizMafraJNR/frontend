@@ -1,0 +1,74 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "view": "Visualizar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "loading": "Carregando...",
+    "error": "Ocorreu um erro. Tente novamente.",
+    "success": "Operação realizada com sucesso",
+    "noResults": "Nenhum resultado encontrado",
+    "required": "Obrigatório"
+  },
+  "nav": {
+    "home": "Início",
+    "patients": "Pacientes",
+    "caregivers": "Cuidadores",
+    "scheduling": "Agendamentos",
+    "settings": "Configurações",
+    "profile": "Perfil"
+  },
+  "auth": {
+    "login": "Entrar",
+    "loginDescription": "Entre com sua conta para continuar",
+    "logout": "Sair",
+    "register": "Cadastrar",
+    "email": "E-mail",
+    "emailPlaceholder": "seu@email.com",
+    "password": "Senha",
+    "passwordPlaceholder": "••••••••",
+    "forgotPassword": "Esqueci a senha",
+    "noAccount": "Não tem uma conta?",
+    "hasAccount": "Já tem uma conta?",
+    "loginError": "E-mail ou senha inválidos"
+  },
+  "patients": {
+    "title": "Pacientes",
+    "new": "Novo Paciente",
+    "edit": "Editar Paciente",
+    "name": "Nome completo",
+    "birthDate": "Data de nascimento",
+    "cpf": "CPF",
+    "phone": "Telefone",
+    "address": "Endereço",
+    "notes": "Observações"
+  },
+  "caregivers": {
+    "title": "Cuidadores",
+    "new": "Novo Cuidador",
+    "edit": "Editar Cuidador",
+    "name": "Nome completo",
+    "specialization": "Especialização",
+    "availability": "Disponibilidade"
+  },
+  "scheduling": {
+    "title": "Agendamentos",
+    "new": "Novo Agendamento",
+    "date": "Data",
+    "time": "Horário",
+    "patient": "Paciente",
+    "caregiver": "Cuidador",
+    "status": {
+      "pending": "Pendente",
+      "confirmed": "Confirmado",
+      "cancelled": "Cancelado",
+      "completed": "Concluído"
+    }
+  }
+}

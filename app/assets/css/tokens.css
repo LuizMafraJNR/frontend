@@ -1,0 +1,99 @@
+/* ============================================================
+   DESIGN TOKENS — Projeto Cuidados
+   Fonte da verdade para todas as decisões de design.
+   Para referência completa: docs/design-tokens.md
+   Ao adicionar tokens: atualizar tokens.css + main.css @theme + docs/design-tokens.md
+   ============================================================ */
+
+:root {
+  /* === PRIMÁRIA (teal — saúde, confiança) === */
+  --cuidados-primary-50:  #f0fdf9;
+  --cuidados-primary-100: #ccfbef;
+  --cuidados-primary-200: #99f6e0;
+  --cuidados-primary-300: #5eead4;
+  --cuidados-primary-400: #2dd4bf;
+  --cuidados-primary-500: #14b8a6;   /* Brand primary */
+  --cuidados-primary-600: #0d9488;   /* Hover */
+  --cuidados-primary-700: #0f766e;
+  --cuidados-primary-800: #115e59;
+  --cuidados-primary-900: #134e4a;
+
+  /* === SECUNDÁRIA (azul — calmo, profissional) === */
+  --cuidados-secondary-50:  #eff6ff;
+  --cuidados-secondary-100: #dbeafe;
+  --cuidados-secondary-500: #3b82f6;
+  --cuidados-secondary-600: #2563eb;
+  --cuidados-secondary-700: #1d4ed8;
+
+  /* === SEMÂNTICAS === */
+  --cuidados-success-50:  #f0fdf4;
+  --cuidados-success-500: #22c55e;
+  --cuidados-success-700: #15803d;
+  --cuidados-warning-50:  #fffbeb;
+  --cuidados-warning-500: #f59e0b;
+  --cuidados-warning-700: #b45309;
+  --cuidados-danger-50:   #fef2f2;
+  --cuidados-danger-500:  #ef4444;
+  --cuidados-danger-700:  #b91c1c;
+
+  /* === NEUTRAS === */
+  --cuidados-neutral-50:  #f9fafb;
+  --cuidados-neutral-100: #f3f4f6;
+  --cuidados-neutral-200: #e5e7eb;
+  --cuidados-neutral-300: #d1d5db;
+  --cuidados-neutral-400: #9ca3af;
+  --cuidados-neutral-500: #6b7280;
+  --cuidados-neutral-600: #4b5563;
+  --cuidados-neutral-700: #374151;
+  --cuidados-neutral-800: #1f2937;
+  --cuidados-neutral-900: #111827;
+
+  /* === TIPOGRAFIA === */
+  --cuidados-font-sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --cuidados-font-heading: 'Poppins', 'Inter', sans-serif;
+  --cuidados-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+  /* === ESCALA DE ESPAÇAMENTO (rem) === */
+  --cuidados-spacing-xs:  0.25rem;   /*  4px */
+  --cuidados-spacing-sm:  0.5rem;    /*  8px */
+  --cuidados-spacing-md:  1rem;      /* 16px */
+  --cuidados-spacing-lg:  1.5rem;    /* 24px */
+  --cuidados-spacing-xl:  2rem;      /* 32px */
+  --cuidados-spacing-2xl: 3rem;      /* 48px */
+
+  /* === BORDER RADIUS === */
+  --cuidados-radius-sm:   0.25rem;   /*  4px */
+  --cuidados-radius-md:   0.5rem;    /*  8px */
+  --cuidados-radius-lg:   0.75rem;   /* 12px */
+  --cuidados-radius-xl:   1rem;      /* 16px */
+  --cuidados-radius-full: 9999px;
+
+  /* === SOMBRAS === */
+  --cuidados-shadow-sm:    0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --cuidados-shadow-card:  0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --cuidados-shadow-md:    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --cuidados-shadow-modal: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* === Z-INDEX — sempre usar variáveis, nunca números brutos === */
+  --cuidados-z-below:    -1;
+  --cuidados-z-base:      0;
+  --cuidados-z-raised:    10;
+  --cuidados-z-dropdown:  100;
+  --cuidados-z-sticky:    200;
+  --cuidados-z-overlay:   300;
+  --cuidados-z-modal:     400;
+  --cuidados-z-toast:     500;
+  --cuidados-z-tooltip:   600;
+}
+
+/* === DARK MODE === */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cuidados-neutral-50:  #111827;
+    --cuidados-neutral-100: #1f2937;
+    --cuidados-neutral-200: #374151;
+    --cuidados-neutral-700: #d1d5db;
+    --cuidados-neutral-800: #e5e7eb;
+    --cuidados-neutral-900: #f9fafb;
+  }
+}

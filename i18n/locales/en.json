@@ -1,0 +1,74 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "error": "An error occurred. Please try again.",
+    "success": "Operation completed successfully",
+    "noResults": "No results found",
+    "required": "Required"
+  },
+  "nav": {
+    "home": "Home",
+    "patients": "Patients",
+    "caregivers": "Caregivers",
+    "scheduling": "Scheduling",
+    "settings": "Settings",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Sign in",
+    "loginDescription": "Sign in to your account to continue",
+    "logout": "Sign out",
+    "register": "Register",
+    "email": "Email",
+    "emailPlaceholder": "you{'@'}email.com",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "forgotPassword": "Forgot password",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginError": "Invalid email or password"
+  },
+  "patients": {
+    "title": "Patients",
+    "new": "New Patient",
+    "edit": "Edit Patient",
+    "name": "Full name",
+    "birthDate": "Date of birth",
+    "cpf": "CPF",
+    "phone": "Phone",
+    "address": "Address",
+    "notes": "Notes"
+  },
+  "caregivers": {
+    "title": "Caregivers",
+    "new": "New Caregiver",
+    "edit": "Edit Caregiver",
+    "name": "Full name",
+    "specialization": "Specialization",
+    "availability": "Availability"
+  },
+  "scheduling": {
+    "title": "Scheduling",
+    "new": "New Appointment",
+    "date": "Date",
+    "time": "Time",
+    "patient": "Patient",
+    "caregiver": "Caregiver",
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    }
+  }
+}
