@@ -181,21 +181,21 @@ Estado local fica em `ref()`/`reactive()` dentro do composable.
 
 Páginas definem seu layout via `definePageMeta({ layout: 'saas' })`.
 
-## Deploy SSR com Docker (artefato compilado)
+## Deploy SSR com Docker (multi-stage)
 
-Para deploy em servidor com Docker, o padrao adotado e runtime puro:
+Para deploy em servidor com Docker, o padrao adotado e multi-stage:
 
-1. O build Nuxt SSR deve ser gerado antes da imagem (`npm run build`)
-2. A imagem copia somente `.output/`
+1. Stage `build`: instala dependencias e executa `npm run build`
+2. Stage `runtime`: copia somente `.output/` gerado no stage anterior
 3. O container inicia com `node .output/server/index.mjs`
 
 Beneficios:
 
-- Menor tempo de inicializacao da imagem (sem build no runtime)
+- Menor tempo de inicializacao do container (sem build no runtime)
 - Menor superficie de variacao entre ambientes
-- Fluxo simples para CI/CD com artefato pronto
+- Funciona em plataformas que fazem build remoto a partir do repositorio
 
 Observacoes:
 
-- O contexto do `docker build` precisa conter `.output/`
+- Nao exige `.output/` previamente no contexto
 - `HOST` e `PORT` podem ser sobrescritos por variaveis de ambiente

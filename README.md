@@ -74,23 +74,17 @@ bun run preview
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
-## Docker (runtime com build pronto)
+## Docker (SSR com multi-stage)
 
-Este projeto usa Nuxt SSR e pode ser executado em container lendo apenas os arquivos ja compilados.
+Este projeto usa Nuxt SSR com Docker multi-stage: o build e gerado na etapa de build e o runtime executa apenas os arquivos compilados.
 
-1. Gere o build no ambiente de CI/CD ou local:
-
-```bash
-npm run build
-```
-
-2. Construa a imagem Docker (o contexto precisa conter a pasta `.output/`):
+1. Construa a imagem Docker:
 
 ```bash
 docker build -t cuidados-frontend:runtime .
 ```
 
-3. Execute o container:
+2. Execute o container:
 
 ```bash
 docker run --rm -p 3000:3000 cuidados-frontend:runtime
