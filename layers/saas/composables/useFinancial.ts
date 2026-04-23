@@ -132,7 +132,7 @@ const prevMonth = (offset: number, time = '10:00') => {
   return `${dt.toISOString().slice(0, 10)} ${time}`
 }
 
-const prevMonthDate = (dayOfMonth: number) => {
+const _prevMonthDate = (dayOfMonth: number) => {
   const dt = new Date(today)
   dt.setMonth(dt.getMonth() - 1)
   dt.setDate(dayOfMonth)

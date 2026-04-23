@@ -123,7 +123,7 @@ Design "dark enterprise" inspirado em Linear, Vercel e Stripe Dashboard. Tokens 
 | `ZimaKpiCard` | `label`, `value`, `change` (ex: '+12.4'), `changeSuffix` (default '%'), `icon`, `loading`, `clickable` | `click` |
 | `ZimaEmptyState` | `icon`, `title`, `description`, `compact` | `default` (slot CTA) |
 | `ZimaCommandPalette` | `items: CommandItem[]` | — (abre via Ctrl+K, integrado com `useSaasLayout()`) |
-| `ZimaSidebar` | `groups: SidebarNavGroup[]`, `activeKey`, `logo`, `appName` | `navigate` |
+| `ZimaSidebar` | `groups: SidebarNavGroup[]`, `activeKey`, `logo`, `appName`, `mobileOpen?` | `navigate`, `close` |
 | `ZimaTopBar` | `breadcrumbs`, `notifications`, `userName`, `userAvatar`, `userRole` | `mark-all-read`, `notification-click`, `profile`, `settings`, `logout` |
 | `ZimaToast` | `toasts: ZimaToastItem[]` | `dismiss` |
 | `ZimaPhonePreview` | `agentName`, `messages: PhoneMessage[]` | — |
@@ -209,6 +209,17 @@ export interface ZimaToastItem {
 }
 ```
 
+### ZimaSidebar — comportamento mobile (drawer)
+
+A sidebar renderiza em dois modos, **controlados por CSS `@media` queries** (breakpoint `1024px`) — não via JS. Isso evita flicker de hidratação (SSR→client) em dispositivos mobile:
+
+- **Desktop (`≥1024px`)**: `position: fixed; left: 0; top: 0; width: var(--zima-sidebar-width) | var(--zima-sidebar-width-collapsed); z-index: var(--zima-z-sidebar)` (200). O layout aplica `padding-left` equivalente no `<main>` para compensar.
+- **Mobile (`<1024px`)**: `position: fixed; width: var(--zima-sidebar-drawer-width)` (280px), `transform: translateX(-100%)` por padrão e `translateX(0)` quando a classe `.zima-sidebar--mobile-open` é aplicada, `z-index: var(--zima-z-overlay)` (500) — **acima** da topbar (300). O botão "Colapsar" é ocultado via CSS; aparece um botão `×` para fechar. O `<main>` não tem `padding-left` em mobile.
+
+**Estratégia anti-flicker**: o componente usa classes (`zima-sidebar--collapsed`, `zima-sidebar--mobile-open`) e `<style scoped>` com `@media`. Para textos (`app-name`, `group-label`, `item-label`), usa `v-show` em vez de `v-if` com regras CSS `display: revert !important` dentro da media mobile — assim em mobile os textos aparecem sempre, independente do valor persistido de `sidebarCollapsed`. O hamburguer do `ZimaTopBar` usa `lg:hidden` (Tailwind CSS) e o layout `saas.vue` também aplica `padding-left` via media query — nenhum estilo visual depende de `isMobile` do JS.
+
+O layout `saas.vue` não envolve a sidebar em nenhum wrapper — passa `:mobile-open="sidebarMobileOpen"` direto e escuta `@close`. O overlay escuro fica entre topbar e drawer, em `z-index: calc(var(--zima-z-overlay) - 1)` (499) e é ocultado em desktop por media query. Não use `transform` em wrappers de elementos com `position: fixed` interno: cria um stacking context que prende o fixed filho.
+
 ---
 
 ## Composables de Domínio SaaS
@@ -227,7 +238,7 @@ Todos os composables usam **mock** com `setTimeout(400ms)` e um `initialized` re
 | `useFiscal()` | `useFiscal.ts` | `FiscalDocument`, `FiscalConfig`, `FiscalDocType`, `FiscalDocStatus`, `FiscalServiceItem`, `FiscalProductItem` | `fetchAll`, `issueNfse`, `issueNfe`, `cancelDocument`, `saveFiscalConfig` |
 | `useCampaigns()` | `useCampaigns.ts` | `Campaign`, `CampaignStatus`, `CampaignChannel`, `CampaignType` | `fetchAll`, `createCampaign`, `duplicateCampaign`, `cancelCampaign` |
 | `useAI()` | `useAI.ts` | `AIAgentConfig`, `KnowledgeEntry`, `ConvFlow`, `BusinessAutomation`, `AIDashboard` | `fetchAll`, `saveAgentConfig`, `addKnowledgeEntry`, `toggleAutomation` |
-| `useSaasLayout()` | `useSaasLayout.ts` | — | `toggleSidebar`, `setupCommandPaletteShortcut`, `sidebarCollapsed`, `commandPaletteOpen` |
+| `useSaasLayout()` | `useSaasLayout.ts` | — | `toggleSidebar`, `setupCommandPaletteShortcut`, `sidebarCollapsed`, `sidebarMobileOpen`, `toggleSidebarMobile`, `closeSidebarMobile`, `commandPaletteOpen`, `isMobile` |
 | `useZimaToast()` | `useZimaToast.ts` | `ZimaToastItem` | `success()`, `error()`, `warning()`, `info()`, `dismiss()` |
 
 ### Constantes exportadas pelos composables

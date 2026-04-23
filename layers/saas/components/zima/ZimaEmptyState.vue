@@ -3,7 +3,7 @@
  * ZimaEmptyState — Estado vazio do Design System Zima Blue.
  * Ícone 48px + título + descrição + CTA slot.
  */
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   icon?: string
   title: string
   description?: string

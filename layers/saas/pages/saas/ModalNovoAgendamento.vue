@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ZimaSearchItem } from '../../components/zima/ZimaSearchAutocomplete.vue'
 import type { ZimaStep } from '../../components/zima/ZimaStepper.vue'
+import ModalCliente from './ModalCliente.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -15,14 +16,18 @@ const emit = defineEmits<{
 const { appointments, fetchAll: fetchAppointments, createAppointment, getAvailableSlots } = useAppointments()
 const { servicesByCategory, fetchAll: fetchServices } = useServices()
 const { professionals, fetchAll: fetchProfessionals } = useProfessionals()
+const { customers, fetchAll: fetchCustomers } = useCustomers()
 const toast = useZimaToast()
 
 onMounted(async () => {
-  // Carrega dados se ainda não foram carregados (o composable cria instâncias separadas)
   if (!appointments.value.length) fetchAppointments()
   if (!servicesByCategory.value.length) fetchServices()
   if (!professionals.value.length) fetchProfessionals()
+  fetchCustomers()
 })
+
+// Modal de cadastro de novo cliente disparado a partir deste modal
+const showCadastroCliente = ref(false)
 
 // ── Steps ────────────────────────────────────────────────────────────────────
 const STEPS: ZimaStep[] = [
@@ -44,33 +49,69 @@ const prevStep = () => {
   if (idx > 0) currentStep.value = STEPS[idx - 1].key
 }
 
-// ── Clientes mock (substituir por useCustomers quando disponível) ─────────────
-const MOCK_CLIENTS_DATA = [
-  { id: 'cli-1', label: 'Maria Silva',     sublabel: '(11) 91234-5678', lastVisit: '28/03/2026', visits: 12, phone: '(11) 91234-5678', email: 'maria.silva@email.com' },
-  { id: 'cli-2', label: 'João Mendes',     sublabel: '(11) 92345-6789', lastVisit: '25/03/2026', visits: 8,  phone: '(11) 92345-6789', email: 'joao.mendes@email.com' },
-  { id: 'cli-3', label: 'Beatriz Souza',   sublabel: '(11) 93456-7890', lastVisit: '02/04/2026', visits: 5,  phone: '(11) 93456-7890', email: 'beatriz.souza@email.com' },
-  { id: 'cli-4', label: 'Rafael Torres',   sublabel: '(11) 94567-8901', lastVisit: '15/03/2026', visits: 3,  phone: '(11) 94567-8901', email: 'rafael.torres@email.com' },
-  { id: 'cli-5', label: 'Fernanda Lima',   sublabel: '(11) 95678-9012', lastVisit: '20/03/2026', visits: 7,  phone: '(11) 95678-9012', email: 'fernanda.lima@email.com' },
-  { id: 'cli-6', label: 'Paulo Andrade',   sublabel: '(11) 96789-0123', lastVisit: '10/03/2026', visits: 2,  phone: '(11) 96789-0123', email: 'paulo.andrade@email.com' },
-  { id: 'cli-7', label: 'Camila Ferreira', sublabel: '(11) 97890-1234', lastVisit: '18/03/2026', visits: 9,  phone: '(11) 97890-1234', email: 'camila.ferreira@email.com' },
-  { id: 'cli-8', label: 'Lucas Oliveira',  sublabel: '(11) 98901-2345', lastVisit: '05/03/2026', visits: 4,  phone: '(11) 98901-2345', email: 'lucas.oliveira@email.com' },
-]
+// ── Step 1: Cliente (via useCustomers) ───────────────────────────────────────
+interface ClientOption {
+  id: string
+  label: string
+  sublabel: string
+  lastVisit: string
+  visits: number
+  phone: string
+  email: string
+}
 
-// ── Step 1: Cliente ──────────────────────────────────────────────────────────
+const clientsList = computed<ClientOption[]>(() =>
+  customers.value.map(c => ({
+    id: c.id,
+    label: c.name,
+    sublabel: c.phone,
+    lastVisit: c.lastVisitDate
+      ? new Date(c.lastVisitDate).toLocaleDateString('pt-BR')
+      : '—',
+    visits: c.visits,
+    phone: c.phone,
+    email: c.email,
+  })),
+)
+
 const clientSearch = ref('')
-const selectedClient = ref<typeof MOCK_CLIENTS_DATA[0] | null>(null)
+const selectedClient = ref<ClientOption | null>(null)
 const filteredClients = computed((): ZimaSearchItem[] => {
   const q = clientSearch.value.toLowerCase()
   if (q.length < 2) return []
-  return MOCK_CLIENTS_DATA
+  return clientsList.value
     .filter(c => c.label.toLowerCase().includes(q) || c.sublabel.includes(q))
     .slice(0, 8)
     .map(c => ({ id: c.id, label: c.label, sublabel: c.sublabel }))
 })
 
 const onClientSelect = (item: ZimaSearchItem) => {
-  selectedClient.value = MOCK_CLIENTS_DATA.find(c => c.id === item.id) ?? null
+  selectedClient.value = clientsList.value.find(c => c.id === item.id) ?? null
   clientSearch.value = item.label
+}
+
+// Ao salvar um cliente novo pelo modal aninhado, pré-seleciona no fluxo
+const onCadastroSalvo = async (saved: { id: string; name: string; phone: string }) => {
+  showCadastroCliente.value = false
+  // Aguarda a reatividade atualizar clientsList com o novo registro
+  await nextTick()
+  const found = clientsList.value.find(c => c.id === saved.id)
+  if (found) {
+    selectedClient.value = found
+    clientSearch.value = found.label
+  } else {
+    // Fallback: usa os dados vindos direto do emit
+    selectedClient.value = {
+      id: saved.id,
+      label: saved.name,
+      sublabel: saved.phone,
+      lastVisit: '—',
+      visits: 0,
+      phone: saved.phone,
+      email: '',
+    }
+    clientSearch.value = saved.name
+  }
 }
 
 const canNextStep1 = computed(() => !!selectedClient.value)
@@ -249,6 +290,7 @@ watch([selectedProfessionalId, professionals], ([id, pros]) => {
 </script>
 
 <template>
+  <div>
   <ZimaModal
     :model-value="modelValue"
     title="Novo Agendamento"
@@ -299,7 +341,7 @@ watch([selectedProfessionalId, professionals], ([id, pros]) => {
         <button
           class="text-sm self-start"
           :style="{ color: 'var(--zima-blue-light)' }"
-          @click="toast.info('Cadastro de cliente disponível em breve.')"
+          @click="showCadastroCliente = true"
         >
           + Cadastrar novo cliente
         </button>
@@ -465,7 +507,7 @@ watch([selectedProfessionalId, professionals], ([id, pros]) => {
           <div v-if="availableSlots.filter(s => s.available).length === 0" class="text-sm" :style="{ color: 'var(--zima-text-muted)' }">
             Sem horários disponíveis para esta data. Tente outra data ou profissional.
           </div>
-          <div v-else class="grid grid-cols-5 gap-2">
+          <div v-else class="grid grid-cols-3 sm:grid-cols-5 gap-2">
             <button
               v-for="slot in availableSlots.filter(s => s.available)"
               :key="slot.time"
@@ -599,4 +641,8 @@ watch([selectedProfessionalId, professionals], ([id, pros]) => {
       </ZimaButton>
     </template>
   </ZimaModal>
+
+  <!-- Cadastro rápido de cliente disparado dentro do fluxo de agendamento -->
+  <ModalCliente v-model="showCadastroCliente" @saved="onCadastroSalvo" />
+  </div>
 </template>

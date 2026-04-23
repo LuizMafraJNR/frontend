@@ -27,7 +27,7 @@ const activeCount = computed(() => professionals.value.filter(p => p.status === 
 <template>
   <div class="flex flex-col gap-6" data-testid="page-equipe">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>
         <h1
           class="text-2xl font-semibold"
@@ -47,7 +47,7 @@ const activeCount = computed(() => professionals.value.filter(p => p.status === 
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="grid grid-cols-3 gap-4">
+    <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <ZimaSkeleton v-for="i in 4" :key="i" preset="card" height="200px" />
     </div>
 
@@ -65,7 +65,7 @@ const activeCount = computed(() => professionals.value.filter(p => p.status === 
     </div>
 
     <!-- Grid de profissionais -->
-    <div v-else class="grid grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <NuxtLink
         v-for="pro in professionals"
         :key="pro.id"

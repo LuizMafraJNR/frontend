@@ -6,7 +6,7 @@ import ModalNovaCategoria from './ModalNovaCategoria.vue'
 definePageMeta({ layout: 'saas' })
 
 const {
-  categories, services, servicesByCategory, loading, fetchAll,
+  categories, services: _services, servicesByCategory, loading, fetchAll,
   toggleServiceActive, createService, updateService, deleteService,
   createCategory, updateCategory, deleteCategory,
   reorderServices, reorderCategories,
@@ -240,9 +240,10 @@ const formatPrice = (price: number) =>
 </script>
 
 <template>
+  <div>
   <div class="flex flex-col gap-6" data-testid="page-servicos">
     <!-- Page Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-semibold" :style="{ color: 'var(--zima-text-primary)' }">
           Serviços
@@ -251,7 +252,7 @@ const formatPrice = (price: number) =>
           Gerencie os serviços e categorias oferecidos pelo seu negócio
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 shrink-0">
         <ZimaButton variant="ghost" @click="openNewCategory">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 14px; height: 14px;" /></template>
           Nova Categoria
@@ -638,4 +639,5 @@ const formatPrice = (price: number) =>
     class="fixed inset-0 z-40"
     @click="openDropdownId = null"
   />
+  </div>
 </template>

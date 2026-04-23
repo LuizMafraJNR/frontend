@@ -18,17 +18,19 @@ const debouncedSearch = useDebounce(searchQuery, 300)
 const statusFilter = ref<string | null>((route.query.status as string) || null)
 const tagsFilter = ref<string | null>((route.query.tags as string) || null)
 const sortBy = ref((route.query.sort as string) || 'name')
+const birthdayThisWeek = ref<boolean>(route.query.birthdayThisWeek === 'true')
 const currentPage = ref(1)
 const pageSize = ref(10)
 
 // Sincroniza URL quando filtros mudam
-watch([debouncedSearch, statusFilter, tagsFilter, sortBy], () => {
+watch([debouncedSearch, statusFilter, tagsFilter, sortBy, birthdayThisWeek], () => {
   router.replace({
     query: {
       ...(debouncedSearch.value ? { q: debouncedSearch.value } : {}),
       ...(statusFilter.value ? { status: statusFilter.value } : {}),
       ...(tagsFilter.value ? { tags: tagsFilter.value } : {}),
       ...(sortBy.value !== 'name' ? { sort: sortBy.value } : {}),
+      ...(birthdayThisWeek.value ? { birthdayThisWeek: 'true' } : {}),
     },
   })
 })
@@ -89,6 +91,18 @@ const filteredCustomers = computed(() => {
     result = result.filter(c => c.tags.includes(tagsFilter.value!))
   }
 
+  if (birthdayThisWeek.value) {
+    const now = new Date()
+    const weekFromNow = new Date()
+    weekFromNow.setDate(now.getDate() + 7)
+    result = result.filter(c => {
+      if (!c.birthDate) return false
+      const [, m, d] = c.birthDate.split('-').map(Number)
+      const thisYearBday = new Date(now.getFullYear(), m - 1, d)
+      return thisYearBday >= now && thisYearBday <= weekFromNow
+    })
+  }
+
   result.sort((a, b) => {
     if (sortBy.value === 'name') return a.name.localeCompare(b.name)
     if (sortBy.value === 'total') return b.totalSpent - a.totalSpent
@@ -120,16 +134,21 @@ const tableRows = computed(() =>
   })),
 )
 
-const tableColumns = [
+const isMobile = ref(false)
+const checkMobile = () => { isMobile.value = window.innerWidth < 640 }
+onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
+
+const tableColumns = computed(() => [
   { key: 'cliente', label: 'Cliente' },
   { key: 'phone', label: 'Telefone' },
-  { key: 'tags', label: 'Tags' },
+  ...(!isMobile.value ? [{ key: 'tags', label: 'Tags' }] : []),
   { key: 'status', label: 'Status' },
   { key: 'visits', label: 'Visitas', align: 'right' as const },
   { key: 'total', label: 'Total Gasto', align: 'right' as const },
-  { key: 'ultima_visita', label: 'Última Visita' },
+  ...(!isMobile.value ? [{ key: 'ultima_visita', label: 'Última Visita' }] : []),
   { key: 'actions', label: '', width: '48px' },
-]
+])
 
 const formatCurrency = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -188,9 +207,10 @@ const clearFilters = () => {
 </script>
 
 <template>
+  <div>
   <div class="flex flex-col gap-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <h1 style="font-size: 24px; font-weight: 700; color: var(--zima-text-primary);">Clientes</h1>
         <span
@@ -219,7 +239,7 @@ const clearFilters = () => {
     <Transition name="slide-down">
       <div
         v-if="selectedIds.length > 0"
-        class="flex items-center gap-3 rounded-lg px-4 py-3"
+        class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg px-4 py-3"
         style="background: var(--zima-blue-core); color: white;"
       >
         <span style="font-size: 13px; font-weight: 500;">{{ selectedIds.length }} selecionado(s)</span>
@@ -246,8 +266,8 @@ const clearFilters = () => {
     </Transition>
 
     <!-- Toolbar -->
-    <div class="flex items-center gap-3">
-      <div class="flex-1">
+    <div class="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+      <div class="w-full sm:flex-1">
         <ZimaInput
           v-model="searchQuery"
           type="search"
@@ -258,6 +278,7 @@ const clearFilters = () => {
         :model-value="statusFilter ?? '__all__'"
         :options="statusOptions"
         placeholder="Status"
+        class="w-full sm:w-auto"
         style="min-width: 160px;"
         @update:model-value="statusFilter = $event === '__all__' ? null : ($event as string)"
       />
@@ -265,12 +286,14 @@ const clearFilters = () => {
         :model-value="tagsFilter ?? '__all__'"
         :options="tagOptions"
         placeholder="Tag"
+        class="w-full sm:w-auto"
         style="min-width: 140px;"
         @update:model-value="tagsFilter = $event === '__all__' ? null : ($event as string)"
       />
       <ZimaSelect
         :model-value="sortBy"
         :options="sortOptions"
+        class="w-full sm:w-auto"
         style="min-width: 160px;"
         @update:model-value="sortBy = $event as string"
       />
@@ -442,6 +465,7 @@ const clearFilters = () => {
     class="fixed inset-0 z-40"
     @click="openDropdownId = null"
   />
+  </div>
 </template>
 
 <style scoped>

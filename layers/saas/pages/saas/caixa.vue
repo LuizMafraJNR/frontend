@@ -9,7 +9,7 @@ const router = useRouter()
 const { services, servicesByCategory, loading: servicesLoading, fetchAll: fetchServices } = useServices()
 const { professionals, fetchAll: fetchProfessionals } = useProfessionals()
 const { customers, fetchAll: fetchCustomers } = useCustomers()
-const { receivables, fetchAll: fetchFinancial } = useFinancial()
+const { receivables, fetchAll: fetchFinancial, addTransaction } = useFinancial()
 
 onMounted(async () => {
   await Promise.all([fetchServices(), fetchProfessionals(), fetchCustomers(), fetchFinancial()])
@@ -208,7 +208,7 @@ const cashChange = computed(() => {
 
 // Credit installments
 const creditInstallments = ref(1)
-const installmentOptions = Array.from({ length: 12 }, (_, i) => ({
+const _installmentOptions = Array.from({ length: 12 }, (_, i) => ({
   label: i === 0 ? '1x à vista' : `${i + 1}x de ${(0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
   value: i + 1,
 }))
@@ -360,18 +360,48 @@ const finalizeSale = async () => {
       items: [...cart.value],
     }
     // Add to sales history
+    const saleId = `sale-${Date.now()}`
+    const saleProfessional = cart.value.find(i => i.type === 'service')
+      ? professionals.value.find(p => p.id === cart.value.find(i => i.type === 'service')?.professionalId)?.name ?? '—'
+      : '—'
     saleHistory.value.unshift({
-      id: `sale-${Date.now()}`,
+      id: saleId,
       date: new Date().toISOString().slice(0, 16).replace('T', ' '),
       customerName: selectedCustomer.value?.name ?? 'Venda avulsa',
       items: [...cart.value],
       total: total.value,
       payment: PAYMENT_LABELS[selectedPayment.value!],
-      professional: cart.value.find(i => i.type === 'service')
-        ? professionals.value.find(p => p.id === cart.value.find(i => i.type === 'service')?.professionalId)?.name ?? '—'
-        : '—',
+      professional: saleProfessional,
     })
+
+    // ── Integração Caixa → Financeiro: grava transação INCOME ────────────────
+    const methodMap: Record<PaymentMethod, 'CASH' | 'PIX' | 'CREDIT' | 'DEBIT' | 'TRANSFER'> = {
+      cash: 'CASH', pix: 'PIX', credit: 'CREDIT', debit: 'DEBIT', split: 'TRANSFER',
+    }
+    const hasService = cart.value.some(i => i.type === 'service')
+    const hasProduct = cart.value.some(i => i.type === 'product')
+    const category: 'SERVICE' | 'PRODUCT' | 'SALE' =
+      hasService && hasProduct ? 'SALE' : hasService ? 'SERVICE' : 'PRODUCT'
+    addTransaction({
+      date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      description: `Venda PDV #${saleId} — ${cart.value.map(i => i.name).join(', ')}`,
+      type: 'INCOME',
+      category,
+      amount: total.value,
+      paymentMethod: methodMap[selectedPayment.value!],
+      status: 'PAID',
+      clientId: selectedCustomer.value?.id,
+      clientName: selectedCustomer.value?.name,
+      items: cart.value.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+      installments: selectedPayment.value === 'credit' ? creditInstallments.value : undefined,
+    })
+
     successModal.value = true
+
+    // Fecha o popup automaticamente após 3s
+    setTimeout(() => {
+      if (successModal.value) closeSale()
+    }, 3000)
   } catch {
     toast.error('Erro ao registrar venda. Tente novamente.')
   } finally {
@@ -451,7 +481,8 @@ const formatDuration = (minutes: number) => {
         <div style="flex: 1; min-width: 200px;">
           <ZimaInput v-model="histSearch" type="search" placeholder="Buscar por cliente ou profissional..." />
         </div>
-        <ZimaSelect :model-value="histPayFilter ?? '__all__'" :options="histPayOptions"
+        <ZimaSelect
+:model-value="histPayFilter ?? '__all__'" :options="histPayOptions"
           style="min-width: 160px;"
           @update:model-value="histPayFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaButton size="sm" @click="activeView = 'pdv'">
@@ -482,7 +513,8 @@ const formatDuration = (minutes: number) => {
 
       <!-- Table -->
       <div style="background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); overflow: hidden;">
-        <ZimaTable :columns="historyColumns" :rows="historyRows"
+        <ZimaTable
+:columns="historyColumns" :rows="historyRows"
           empty-title="Nenhuma venda registrada" empty-description="As vendas do PDV aparecerão aqui"
           row-clickable @row-click="(r) => histViewSaleId = r.id as string">
           <template #cell-data="{ row }">
@@ -505,9 +537,11 @@ const formatDuration = (minutes: number) => {
           </template>
           <template #cell-acoes="{ row }">
             <div style="display: flex; gap: 4px;" @click.stop>
-              <button style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
+              <button
+style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
                 @click="histViewSaleId = row.id as string">Ver</button>
-              <button style="font-size: 12px; color: var(--zima-text-muted); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
+              <button
+style="font-size: 12px; color: var(--zima-text-muted); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
                 @click="toast.info('Estorno em breve...')">Estornar</button>
             </div>
           </template>
@@ -539,7 +573,8 @@ const formatDuration = (minutes: number) => {
             <div>
               <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 8px;">Itens</div>
               <div style="border: 1px solid var(--zima-border-default); border-radius: var(--zima-radius-md); overflow: hidden;">
-                <div v-for="(item, i) in histViewSale.items" :key="i"
+                <div
+v-for="(item, i) in histViewSale.items" :key="i"
                   style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;"
                   :style="{ borderBottom: i < histViewSale.items.length - 1 ? '1px solid var(--zima-border-divider)' : 'none' }">
                   <div>
@@ -976,7 +1011,7 @@ const formatDuration = (minutes: number) => {
                   :placeholder="formatCurrency(total)"
                   class="flex-1 rounded-lg px-2 py-1.5"
                   style="background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12); color: var(--zima-text-primary); font-size: 13px; outline: none; font-family: 'Geist Mono', monospace;"
-                />
+                >
               </div>
               <div v-if="cashReceived !== null" class="flex items-center justify-between">
                 <span v-if="cashChange !== null && cashChange >= 0" style="font-size: 13px; color: var(--zima-text-muted);">Troco</span>
@@ -1016,7 +1051,7 @@ const formatDuration = (minutes: number) => {
                   placeholder="R$"
                   class="rounded-lg px-2 py-2"
                   style="width: 90px; background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12); color: var(--zima-text-primary); font-size: 13px; outline: none; font-family: 'Geist Mono', monospace;"
-                />
+                >
                 <button v-if="splitEntries.length > 2" style="background: none; border: none; cursor: pointer; color: var(--zima-text-muted); padding: 4px;" @click="removeSplitEntry(i)">
                   <Icon name="i-lucide-x" style="width: 13px; height: 13px;" />
                 </button>

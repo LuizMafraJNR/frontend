@@ -75,3 +75,14 @@ const CUSTOMER_STATUS: Record<CustomerStatus, { label: string, variant: string }
 
 - 10+ clientes com histórico de visitas, gasto total e status variados
 - Inclui exemplos de cada status: ACTIVE, INACTIVE, VIP, NEW
+
+## Responsividade
+
+| Breakpoint | Comportamento |
+|-----------|--------------|
+| `< sm` (640px) | Header empilha verticalmente (título acima, botão abaixo) |
+| `< sm` (640px) | Toolbar de filtros empilha: campos ocupa largura total, um por linha |
+| `< sm` (640px) | Tabela oculta colunas `tags` e `ultima_visita` — `tableColumns` é `computed` filtrado por `isMobile` |
+| Qualquer tela | Batch actions bar tem `flex-wrap` para não estourar em mobile |
+
+As colunas visíveis em mobile são: **Cliente · Telefone · Status · Visitas · Total Gasto · Ações**.

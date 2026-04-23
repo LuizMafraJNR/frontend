@@ -82,3 +82,14 @@ O modal de Novo Agendamento é acionado via `useState<boolean>('saas:modal:newAp
 // No layout saas.vue
 { id: 'a-novo-agend', action: () => { const s = useState('saas:modal:newAppointment', () => false); s.value = true } }
 ```
+
+## Responsividade
+
+| Breakpoint | Comportamento |
+|-----------|--------------|
+| `< lg` (1024px) | Seção "Agenda de Hoje" substitui a timeline posicionada por uma lista de cards empilhados (`v-if isMobile`) |
+| `< lg` (1024px) | Cada card exibe: horário · nome do cliente · serviço · badge de status; borda esquerda colorida por status |
+| Qualquer tela | Popover "Personalizado" tem `maxWidth: min(280px, calc(100vw - 32px))` para não vazar em viewports estreitas |
+| Header/KPIs | Já responsivos nativamente (`flex-col lg:flex-row` e `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`) |
+
+A lista mobile renderiza apenas agendamentos não-cancelados do dia atual (mesmo filtro da timeline desktop).

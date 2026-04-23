@@ -219,9 +219,16 @@ export const useCampaigns = () => {
     toast.success('Campanha removida.')
   }
 
+  const updateCampaign = (id: string, patch: Partial<Campaign>): Campaign | undefined => {
+    const camp = campaigns.value.find(c => c.id === id)
+    if (!camp) return undefined
+    Object.assign(camp, patch)
+    return camp
+  }
+
   const getCampaign = (id: string): Campaign | undefined => {
     return campaigns.value.find(c => c.id === id)
   }
 
-  return { campaigns, addCampaign, sendCampaign, scheduleCampaign, deleteCampaign, getCampaign }
+  return { campaigns, addCampaign, sendCampaign, scheduleCampaign, updateCampaign, deleteCampaign, getCampaign }
 }

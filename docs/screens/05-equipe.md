@@ -81,3 +81,26 @@ interface Blockout {
 ## Tela de Detalhe (`[id].vue`)
 
 Exibe perfil completo: dados pessoais, horário de trabalho editável (grade de dias/horas), histórico de agendamentos e comissões do mês.
+
+## Responsividade
+
+### Lista (`index.vue`)
+
+| Breakpoint | Comportamento |
+|-----------|--------------|
+| `< sm` (640px) | Header empilha verticalmente (título/descrição acima, botão abaixo) |
+| `< sm` (640px) | Grid de cards: 1 coluna full-width |
+| `sm` (640px+) | Grid de cards: 2 colunas |
+| `lg` (1024px+) | Grid de cards: 3 colunas (comportamento original) |
+
+### Detalhe (`[id].vue`)
+
+| Breakpoint | Comportamento |
+|-----------|--------------|
+| `< lg` (1024px) | Layout 2-colunas empilha: sidebar do profissional (280px) passa para full-width acima do conteúdo |
+| `< sm` (640px) | Tab bar ocupa largura total (`w-full`) com scroll horizontal oculto (`hide-scrollbar`) |
+| `sm+` (640px+) | Tab bar retorna ao comportamento `w-fit` |
+| `sm+` (640px+) | Grid de KPIs (aba Desempenho) exibe 3 colunas; abaixo disso, 1 coluna |
+| `sm+` (640px+) | Grid do formulário de novo bloqueio exibe 2 colunas; abaixo disso, 1 coluna |
+| Qualquer tela | Linha de horário com `flex-wrap` — selects de hora/início/fim quebram para nova linha se necessário |
+| Qualquer tela | Email do profissional usa `truncate` com `min-w-0` no container para truncar corretamente |

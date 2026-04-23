@@ -37,6 +37,7 @@ export interface Conversation {
   attendantId?: string
   attendantName?: string
   messages: InboxMessage[]
+  blocked?: boolean
 }
 
 // ── Helpers de data ───────────────────────────────────────────────────────────
@@ -292,6 +293,12 @@ export const useInbox = () => {
     conversations.value.filter(c => c.status === 'WAITING').length,
   )
 
+  const setBlocked = (convId: string, value: boolean) => {
+    const conv = conversations.value.find(c => c.id === convId)
+    if (!conv) return
+    conv.blocked = value
+  }
+
   return {
     conversations,
     loading,
@@ -304,5 +311,6 @@ export const useInbox = () => {
     markAsRead,
     totalUnread,
     waitingCount,
+    setBlocked,
   }
 }

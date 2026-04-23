@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Professional, WorkSchedule, Blockout } from '../../../composables/useProfessionals'
+import type { WorkSchedule, Blockout } from '../../../composables/useProfessionals'
 
 definePageMeta({ layout: 'saas' })
 
@@ -7,12 +7,12 @@ const route = useRoute()
 const proId = route.params.id as string
 
 const {
-  professionals, schedules, blockouts, loading,
+  professionals: _professionals, schedules: _schedules, blockouts: _blockouts, loading,
   fetchAll, getProfessional, getSchedule, getBlockouts,
-  updateProfessional, updateSchedule, createBlockout, deleteBlockout,
+  updateProfessional: _updateProfessional, updateSchedule, createBlockout, deleteBlockout,
   statusLabel, statusVariant, DAY_LABELS,
 } = useProfessionals()
-const { services, fetchAll: fetchServices } = useServices()
+const { services: _services, fetchAll: fetchServices } = useServices()
 const toast = useZimaToast()
 
 onMounted(async () => {
@@ -82,6 +82,19 @@ const removeBlockout = async (blk: Blockout) => {
   toast.success('Bloqueio removido.')
 }
 
+// ---- Responsividade ----
+const isMobile = ref(false)
+const checkMobile = () => { isMobile.value = window.innerWidth < 640 }
+onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
+
+const blockoutColumns = computed(() => [
+  { key: 'startDate', label: 'Início' },
+  ...(!isMobile.value ? [{ key: 'endDate', label: 'Fim' }] : []),
+  { key: 'reason', label: 'Motivo' },
+  { key: 'actions', label: '', width: '60px' },
+])
+
 // ---- Performance (mock) ----
 const MOCK_RATINGS = [
   { client: 'Maria Silva', rating: 5, comment: 'Excelente atendimento, amei o resultado!', date: '2026-03-28' },
@@ -109,8 +122,8 @@ const formatRevenue = (val: number) =>
     </NuxtLink>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex gap-6">
-      <ZimaSkeleton preset="card" style="width: 280px; min-height: 400px; flex-shrink: 0;" />
+    <div v-if="loading" class="flex flex-col lg:flex-row gap-6">
+      <ZimaSkeleton preset="card" class="w-full lg:w-[280px] lg:shrink-0" style="min-height: 400px;" />
       <div class="flex-1 flex flex-col gap-4">
         <ZimaSkeleton preset="card" height="48px" />
         <ZimaSkeleton preset="card" height="300px" />
@@ -130,9 +143,9 @@ const formatRevenue = (val: number) =>
     </div>
 
     <!-- Content -->
-    <div v-else class="flex gap-6 items-start">
+    <div v-else class="flex flex-col lg:flex-row gap-6 lg:items-start">
       <!-- Sidebar do profissional -->
-      <div class="flex flex-col gap-4 shrink-0" style="width: 280px;">
+      <div class="w-full lg:w-[280px] lg:shrink-0 flex flex-col gap-4">
         <ZimaCard>
           <div class="flex flex-col items-center gap-3 text-center">
             <ZimaAvatar :src="professional.avatar" :name="professional.name" size="xl" />
@@ -158,15 +171,15 @@ const formatRevenue = (val: number) =>
           <!-- Contato -->
           <div class="flex flex-col gap-3">
             <div class="flex items-center gap-2">
-              <Icon name="i-lucide-phone" style="width: 14px; height: 14px; shrink: 0;" :style="{ color: 'var(--zima-text-muted)' }" />
+              <Icon name="i-lucide-phone" class="shrink-0" style="width: 14px; height: 14px;" :style="{ color: 'var(--zima-text-muted)' }" />
               <span class="text-sm" :style="{ color: 'var(--zima-text-secondary)' }">{{ professional.phone }}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <Icon name="i-lucide-mail" style="width: 14px; height: 14px; shrink: 0;" :style="{ color: 'var(--zima-text-muted)' }" />
+            <div class="flex items-center gap-2 min-w-0">
+              <Icon name="i-lucide-mail" class="shrink-0" style="width: 14px; height: 14px;" :style="{ color: 'var(--zima-text-muted)' }" />
               <span class="text-sm truncate" :style="{ color: 'var(--zima-text-secondary)' }">{{ professional.email }}</span>
             </div>
             <div class="flex items-center gap-2">
-              <Icon name="i-lucide-calendar" style="width: 14px; height: 14px; shrink: 0;" :style="{ color: 'var(--zima-text-muted)' }" />
+              <Icon name="i-lucide-calendar" class="shrink-0" style="width: 14px; height: 14px;" :style="{ color: 'var(--zima-text-muted)' }" />
               <span class="text-sm" :style="{ color: 'var(--zima-text-secondary)' }">Desde {{ formatDate(professional.joinedAt) }}</span>
             </div>
           </div>
@@ -201,7 +214,7 @@ const formatRevenue = (val: number) =>
       <!-- Área principal com tabs -->
       <div class="flex-1 min-w-0 flex flex-col gap-4">
         <!-- Tabs -->
-        <div class="flex items-center gap-1 p-1 rounded-lg w-fit" :style="{ background: 'var(--zima-bg-surface-2)' }">
+        <div class="flex items-center gap-1 p-1 rounded-lg w-full sm:w-fit overflow-x-auto hide-scrollbar" :style="{ background: 'var(--zima-bg-surface-2)' }">
           <button
             v-for="tab in [
               { key: 'schedule', label: 'Horário' },
@@ -238,42 +251,49 @@ const formatRevenue = (val: number) =>
               </ZimaButton>
             </div>
 
-            <div class="flex flex-col gap-3">
+            <div class="flex flex-col">
               <div
                 v-for="day in localScheduleDays"
                 :key="day.day"
-                class="flex items-center gap-4"
+                class="flex items-center gap-3 py-3"
+                :style="{ borderBottom: '1px solid var(--zima-border-divider)' }"
               >
-                <div style="width: 80px;">
-                  <span class="text-sm" :style="{ color: 'var(--zima-text-secondary)' }">
+                <!-- Nome do dia fixo -->
+                <div class="w-12 shrink-0">
+                  <span class="text-sm font-medium" :style="{ color: 'var(--zima-text-secondary)' }">
                     {{ DAY_LABELS[day.day] }}
                   </span>
                 </div>
 
+                <!-- Toggle -->
                 <ZimaToggle
                   :model-value="day.active"
                   size="sm"
+                  class="shrink-0"
                   @update:model-value="day.active = $event; handleScheduleChange()"
                 />
 
+                <!-- Selects preenchem o restante ou "Folga" -->
                 <template v-if="day.active">
-                  <ZimaSelect
-                    :model-value="day.startTime"
-                    :options="timeOptions"
-                    style="width: 120px;"
-                    @update:model-value="day.startTime = String($event); handleScheduleChange()"
-                  />
-                  <span class="text-xs" :style="{ color: 'var(--zima-text-muted)' }">até</span>
-                  <ZimaSelect
-                    :model-value="day.endTime"
-                    :options="timeOptions"
-                    style="width: 120px;"
-                    @update:model-value="day.endTime = String($event); handleScheduleChange()"
-                  />
+                  <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <ZimaSelect
+                      :model-value="day.startTime"
+                      :options="timeOptions"
+                      class="flex-1 min-w-0"
+                      @update:model-value="day.startTime = String($event); handleScheduleChange()"
+                    />
+                    <span class="text-xs shrink-0" :style="{ color: 'var(--zima-text-muted)' }">–</span>
+                    <ZimaSelect
+                      :model-value="day.endTime"
+                      :options="timeOptions"
+                      class="flex-1 min-w-0"
+                      @update:model-value="day.endTime = String($event); handleScheduleChange()"
+                    />
+                  </div>
                 </template>
                 <span
                   v-else
-                  class="text-sm"
+                  class="text-sm flex-1"
                   :style="{ color: 'var(--zima-text-muted)' }"
                 >
                   Folga
@@ -286,11 +306,11 @@ const formatRevenue = (val: number) =>
         <!-- Tab: Bloqueios -->
         <template v-else-if="activeTab === 'blockouts'">
           <ZimaCard>
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 class="text-sm font-semibold" :style="{ color: 'var(--zima-text-primary)' }">
                 Períodos Bloqueados
               </h3>
-              <ZimaButton size="sm" @click="modalBloqueioBopen = true">
+              <ZimaButton size="sm" class="self-start sm:self-auto" @click="modalBloqueioBopen = true">
                 <template #icon-left><Icon name="i-lucide-plus" style="width: 14px; height: 14px;" /></template>
                 Novo Bloqueio
               </ZimaButton>
@@ -306,12 +326,7 @@ const formatRevenue = (val: number) =>
 
             <ZimaTable
               v-else
-              :columns="[
-                { key: 'startDate', label: 'Início' },
-                { key: 'endDate', label: 'Fim' },
-                { key: 'reason', label: 'Motivo' },
-                { key: 'actions', label: '', width: '60px' },
-              ]"
+              :columns="blockoutColumns"
               :rows="proBlockouts"
             >
               <template #cell-startDate="{ row }">
@@ -358,7 +373,7 @@ const formatRevenue = (val: number) =>
             size="sm"
           >
             <div class="flex flex-col gap-4">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <ZimaInput
                   v-model="blockoutForm.startDate"
                   label="Data início"
@@ -386,8 +401,9 @@ const formatRevenue = (val: number) =>
         <!-- Tab: Desempenho -->
         <template v-else>
           <!-- KPI Cards -->
-          <div class="grid grid-cols-3 gap-4">
-            <ZimaCard v-for="kpi in [
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <ZimaCard
+v-for="kpi in [
               { label: 'Agendamentos no mês', value: String(professional.appointmentsThisMonth), icon: 'i-lucide-calendar-check' },
               { label: 'Receita gerada', value: formatRevenue(professional.revenueThisMonth), icon: 'i-lucide-trending-up' },
               { label: 'Comissão a pagar', value: formatRevenue(professional.revenueThisMonth * professional.commissionRate / 100), icon: 'i-lucide-banknote' },
@@ -403,7 +419,7 @@ const formatRevenue = (val: number) =>
                 >
                   <Icon :name="kpi.icon" style="width: 16px; height: 16px;" :style="{ color: 'var(--zima-blue-light)' }" />
                 </div>
-                <div>
+                <div class="flex-1 min-w-0">
                   <p class="text-xs" :style="{ color: 'var(--zima-text-muted)' }">{{ kpi.label }}</p>
                   <p
                     class="text-lg font-bold tabular-nums mt-0.5"
@@ -425,14 +441,14 @@ const formatRevenue = (val: number) =>
               <div
                 v-for="r in MOCK_RATINGS"
                 :key="r.client"
-                class="flex flex-col gap-1 pb-4"
+                class="flex flex-col gap-1.5 pb-4"
                 :style="{ borderBottom: '1px solid var(--zima-border-divider)' }"
               >
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
                   <span class="text-sm font-medium" :style="{ color: 'var(--zima-text-primary)' }">
                     {{ r.client }}
                   </span>
-                  <div class="flex items-center gap-1">
+                  <div class="flex items-center gap-1 shrink-0">
                     <Icon
                       v-for="i in 5"
                       :key="i"
@@ -440,11 +456,14 @@ const formatRevenue = (val: number) =>
                       style="width: 12px; height: 12px;"
                       :style="{ color: i <= r.rating ? '#F59E0B' : 'var(--zima-border-hover)' }"
                     />
-                    <span class="text-xs ml-1" :style="{ color: 'var(--zima-text-muted)' }">
+                    <span class="text-xs ml-1 hidden sm:inline" :style="{ color: 'var(--zima-text-muted)' }">
                       {{ formatDate(r.date) }}
                     </span>
                   </div>
                 </div>
+                <span class="text-xs sm:hidden" :style="{ color: 'var(--zima-text-muted)' }">
+                  {{ formatDate(r.date) }}
+                </span>
                 <p class="text-sm" :style="{ color: 'var(--zima-text-secondary)' }">
                   "{{ r.comment }}"
                 </p>

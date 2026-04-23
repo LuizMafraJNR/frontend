@@ -181,6 +181,24 @@ Estado local fica em `ref()`/`reactive()` dentro do composable.
 
 Páginas definem seu layout via `definePageMeta({ layout: 'saas' })`.
 
+## Padrão Responsivo (layer `saas`)
+
+Breakpoint mobile da layer SaaS: **1024px** (`lg:` do Tailwind). O gate mobile/desktop é feito **via CSS `@media` queries**, não por JS — isso evita flicker de hidratação em SSR. O estado `useSaasLayout().isMobile` existe para lógica comportamental (ex.: body-scroll-lock), mas **nenhum estilo visual depende dele**.
+
+- **Sidebar**: vira drawer off-canvas via classes `.zima-sidebar--mobile-open` + `@media (max-width: 1023.98px)` (ver [components.md](components.md#zimasidebar--comportamento-mobile-drawer)).
+- **TopBar**: mantém só o essencial; dropdowns usam `width: min(Xpx, calc(100vw - 32px))` para nunca ultrapassar o viewport. Hamburguer via `lg:hidden` (Tailwind).
+- **Main**: `padding-left` é aplicado por `@media (min-width: 1024px)` no layout — em mobile fica `0` por padrão CSS, sem depender de JS.
+- **Root do layout**: `overflow-x: hidden` como rede de segurança contra overflow residual de páginas ainda não refatoradas.
+
+### Padrões reutilizáveis em páginas/modais
+
+1. **Toolbars**: sempre `flex flex-wrap gap-*` — nunca `flex` puro com muitos filhos.
+2. **Inputs/selects com `width` hardcoded**: usar `max-width: <valor>` em vez de `width`, garantindo colapso em telas estreitas.
+3. **Grids em modais**: `grid-cols-1 sm:grid-cols-2` / `grid-cols-2 sm:grid-cols-4` em vez de sempre 2/4 colunas.
+4. **`ZimaTabs`**: o próprio componente já embrulha a linha de tabs em `overflow-x-auto hide-scrollbar` — nada a fazer nas páginas.
+5. **Tabelas via `ZimaTable`**: já têm `overflow-x-auto` interno.
+6. **`ZimaModal` / `ZimaDrawer` / `ZimaCommandPalette`**: já respondem a viewport (`maxWidth: 100vw`, `p-4`) — o conteúdo interno é quem deve usar grids responsivos.
+
 ## Deploy SSR com Docker (multi-stage)
 
 Para deploy em servidor com Docker, o padrao adotado e multi-stage:

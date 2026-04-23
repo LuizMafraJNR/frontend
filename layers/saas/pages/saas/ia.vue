@@ -97,8 +97,8 @@ const removeTransferTopic = (t: string) => {
 // Preview de tom de voz (linha na UI, abaixo do select)
 const tonePreviewMap = computed<Record<string, string>>(() => ({
   professional: 'Bom dia! Como posso ajudá-lo(a) hoje?',
-  friendly: 'Oi! 😊 Tudo bem? Em que posso te ajudar?',
-  casual: 'E aí! Bora agendar? 💇',
+  friendly: 'Oi! Tudo bem? Em que posso te ajudar?',
+  casual: 'E aí! Bora agendar?',
   formal: 'Prezado(a), seja bem-vindo(a). Em que posso ser útil?',
   custom: localConfig.customToneInstructions || 'Tom personalizado conforme instruções.',
 }))
@@ -106,8 +106,8 @@ const tonePreviewMap = computed<Record<string, string>>(() => ({
 // Resposta da IA no ZimaPhonePreview (muda conforme o tom selecionado)
 const toneResponseMap = computed<Record<string, string>>(() => ({
   professional: 'O corte feminino custa R$ 80,00 com duração de 45 min. Gostaria de agendar?',
-  friendly: 'Boa! 😊 O corte feminino fica R$ 80,00 e leva uns 45 minutinhos. Agendamos?',
-  casual: 'É R$ 80 e demora ~45min. Bora marcar? 💇‍♀️',
+  friendly: 'Boa! O corte feminino fica R$ 80,00 e leva uns 45 minutinhos. Agendamos?',
+  casual: 'É R$ 80 e demora ~45min. Bora marcar?',
   formal: 'O serviço de corte feminino tem o valor de R$ 80,00 com duração de 45 minutos. Posso efetuar o agendamento?',
   custom: localConfig.customToneInstructions
     ? '[Tom personalizado] O corte feminino custa R$ 80,00. Deseja agendar?'
@@ -237,11 +237,11 @@ const saveImportedChunks = () => {
 
 // ── Fluxos ────────────────────────────────────────────────────────────────────
 const flowTemplates = [
-  { icon: '📅', name: 'Agendamento completo', trigger: 'agendar, marcar, horário' },
-  { icon: '❓', name: 'FAQ automático', trigger: 'preço, quanto custa, valor' },
-  { icon: '⭐', name: 'Pesquisa de satisfação', trigger: '2h após atendimento' },
-  { icon: '🔄', name: 'Reativação de clientes', trigger: '30 dias sem visita' },
-  { icon: '👋', name: 'Boas-vindas', trigger: 'Novo cliente cadastrado' },
+  { icon: 'i-lucide-calendar',     name: 'Agendamento completo',    trigger: 'agendar, marcar, horário' },
+  { icon: 'i-lucide-help-circle',  name: 'FAQ automático',          trigger: 'preço, quanto custa, valor' },
+  { icon: 'i-lucide-star',         name: 'Pesquisa de satisfação',  trigger: '2h após atendimento' },
+  { icon: 'i-lucide-refresh-cw',   name: 'Reativação de clientes',  trigger: '30 dias sem visita' },
+  { icon: 'i-lucide-hand',         name: 'Boas-vindas',             trigger: 'Novo cliente cadastrado' },
 ]
 
 const useFlowTemplate = (tpl: typeof flowTemplates[0]) => {
@@ -302,16 +302,16 @@ const actionOptions = [
 ]
 
 const autoTemplates = [
-  { icon: '🔔', name: 'Lembrete de agendamento', triggerType: 'before_appointment', triggerLabel: '24h antes do agendamento', actionType: 'whatsapp', actionLabel: 'Lembrete: seu horário é amanhã às {{hora_agendamento}}' },
-  { icon: '✅', name: 'Confirmação de agendamento', triggerType: 'appointment_created', triggerLabel: 'Agendamento criado', actionType: 'whatsapp', actionLabel: 'Agendamento confirmado para {{data_agendamento}} às {{hora_agendamento}}' },
-  { icon: '⭐', name: 'Pesquisa de satisfação', triggerType: 'after_appointment', triggerLabel: '2h após atendimento concluído', actionType: 'whatsapp', actionLabel: 'Como foi seu atendimento? Responda de 1 a 5' },
-  { icon: '🎂', name: 'Parabéns + cupom aniversário', triggerType: 'birthday', triggerLabel: 'Data de nascimento do cliente', actionType: 'whatsapp', actionLabel: 'Feliz aniversário! 🎉 Use o cupom ANIVER10 para 10% off' },
-  { icon: '💤', name: 'Reativação de inativos', triggerType: 'inactive', triggerLabel: 'Cliente sem visita há 30 dias', actionType: 'whatsapp', actionLabel: 'Faz tempo que não te vemos! Que tal agendar?' },
-  { icon: '📦', name: 'Alerta de estoque baixo', triggerType: 'low_stock', triggerLabel: 'Produto atinge estoque mínimo', actionType: 'notification', actionLabel: 'Notificação in-app + email para o gerente' },
-  { icon: '💰', name: 'Resumo financeiro semanal', triggerType: 'recurring', triggerLabel: 'Toda segunda-feira 08:00', actionType: 'email', actionLabel: 'Email para o owner com resumo da semana' },
-  { icon: '📋', name: 'Follow-up pós-atendimento', triggerType: 'after_appointment', triggerLabel: '7 dias após atendimento', actionType: 'whatsapp', actionLabel: 'Tudo certo com seu {{servico}}? Precisa de algo?' },
-  { icon: '🚨', name: 'Alerta de no-show', triggerType: 'noshow', triggerLabel: 'Cliente não aparece (no-show)', actionType: 'notification', actionLabel: 'Notificação para equipe + tag "No-show" aplicada' },
-  { icon: '📊', name: 'Comissão calculada', triggerType: 'recurring', triggerLabel: 'Final do mês', actionType: 'notification', actionLabel: 'Notificação para profissionais com comissão do mês' },
+  { icon: 'i-lucide-bell',           name: 'Lembrete de agendamento',         triggerType: 'before_appointment',  triggerLabel: '24h antes do agendamento',                 actionType: 'whatsapp',     actionLabel: 'Lembrete: seu horário é amanhã às {{hora_agendamento}}' },
+  { icon: 'i-lucide-check-circle',   name: 'Confirmação de agendamento',      triggerType: 'appointment_created', triggerLabel: 'Agendamento criado',                       actionType: 'whatsapp',     actionLabel: 'Agendamento confirmado para {{data_agendamento}} às {{hora_agendamento}}' },
+  { icon: 'i-lucide-star',           name: 'Pesquisa de satisfação',          triggerType: 'after_appointment',   triggerLabel: '2h após atendimento concluído',            actionType: 'whatsapp',     actionLabel: 'Como foi seu atendimento? Responda de 1 a 5' },
+  { icon: 'i-lucide-cake',           name: 'Parabéns + cupom aniversário',    triggerType: 'birthday',            triggerLabel: 'Data de nascimento do cliente',            actionType: 'whatsapp',     actionLabel: 'Feliz aniversário! Use o cupom ANIVER10 para 10% off' },
+  { icon: 'i-lucide-moon',           name: 'Reativação de inativos',          triggerType: 'inactive',            triggerLabel: 'Cliente sem visita há 30 dias',            actionType: 'whatsapp',     actionLabel: 'Faz tempo que não te vemos! Que tal agendar?' },
+  { icon: 'i-lucide-package',        name: 'Alerta de estoque baixo',         triggerType: 'low_stock',           triggerLabel: 'Produto atinge estoque mínimo',            actionType: 'notification', actionLabel: 'Notificação in-app + email para o gerente' },
+  { icon: 'i-lucide-dollar-sign',    name: 'Resumo financeiro semanal',       triggerType: 'recurring',           triggerLabel: 'Toda segunda-feira 08:00',                 actionType: 'email',        actionLabel: 'Email para o owner com resumo da semana' },
+  { icon: 'i-lucide-clipboard-list', name: 'Follow-up pós-atendimento',       triggerType: 'after_appointment',   triggerLabel: '7 dias após atendimento',                  actionType: 'whatsapp',     actionLabel: 'Tudo certo com seu {{servico}}? Precisa de algo?' },
+  { icon: 'i-lucide-siren',          name: 'Alerta de no-show',               triggerType: 'noshow',              triggerLabel: 'Cliente não aparece (no-show)',            actionType: 'notification', actionLabel: 'Notificação para equipe + tag "No-show" aplicada' },
+  { icon: 'i-lucide-bar-chart-3',    name: 'Comissão calculada',              triggerType: 'recurring',           triggerLabel: 'Final do mês',                             actionType: 'notification', actionLabel: 'Notificação para profissionais com comissão do mês' },
 ]
 
 const openAddAuto = () => {
@@ -426,7 +426,8 @@ const formatRelative = (iso: string) => {
           <div style="display:flex; align-items:center; gap:12px;">
             <svg viewBox="0 0 36 36" style="width:64px;height:64px;flex-shrink:0;">
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(16,185,129,0.12)" stroke-width="3"/>
-              <circle cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ? '#10B981' : dashboard.aiResolutionRate >= 50 ? '#F59E0B' : '#EF4444'" stroke-width="3"
+              <circle
+cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ? '#10B981' : dashboard.aiResolutionRate >= 50 ? '#F59E0B' : '#EF4444'" stroke-width="3"
                 :stroke-dasharray="`${dashboard.aiResolutionRate} ${100 - dashboard.aiResolutionRate}`" stroke-linecap="round"
                 transform="rotate(-90 18 18)"/>
               <text x="18" y="22" text-anchor="middle" style="font-size:8px;font-weight:700;" :fill="dashboard.aiResolutionRate >= 70 ? '#10B981' : '#F59E0B'">{{ dashboard.aiResolutionRate }}%</text>
@@ -470,10 +471,10 @@ const formatRelative = (iso: string) => {
           </div>
           <div style="display:flex; gap:12px; margin-top:8px;">
             <div style="display:flex; align-items:center; gap:4px; font-size:11px; color:var(--zima-text-muted);">
-              <div style="width:8px;height:8px;border-radius:2px;background:#3B82F6;"></div> IA
+              <div style="width:8px;height:8px;border-radius:2px;background:#3B82F6;"/> IA
             </div>
             <div style="display:flex; align-items:center; gap:4px; font-size:11px; color:var(--zima-text-muted);">
-              <div style="width:8px;height:8px;border-radius:2px;background:#F97316;"></div> Humano
+              <div style="width:8px;height:8px;border-radius:2px;background:#F97316;"/> Humano
             </div>
           </div>
         </div>
@@ -739,7 +740,7 @@ const formatRelative = (iso: string) => {
             <template #icon-left><Icon name="i-lucide-upload" style="width:14px;height:14px;" /></template>
             Importar documento
           </ZimaButton>
-          <input ref="importInputRef" type="file" accept=".pdf,.docx,.txt" style="display:none;" @change="handleImport" />
+          <input ref="importInputRef" type="file" accept=".pdf,.docx,.txt" style="display:none;" @change="handleImport" >
           <ZimaButton @click="openAddKb">
             <template #icon-left><Icon name="i-lucide-plus" style="width:14px;height:14px;" /></template>
             Adicionar Conhecimento
@@ -860,7 +861,7 @@ const formatRelative = (iso: string) => {
       <!-- Templates -->
       <div>
         <div style="font-size:14px; font-weight:600; color:var(--zima-text-primary); margin-bottom:16px;">Começar com um template</div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style="gap:12px;">
           <div
             v-for="tpl in flowTemplates"
             :key="tpl.name"
@@ -868,7 +869,7 @@ const formatRelative = (iso: string) => {
             @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.4)'"
             @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'"
           >
-            <div style="font-size:24px; margin-bottom:8px;">{{ tpl.icon }}</div>
+            <Icon :name="tpl.icon" style="width:24px; height:24px; color:var(--zima-blue-core); margin-bottom:8px;" />
             <div style="font-size:13px; font-weight:600; color:var(--zima-text-primary); margin-bottom:4px;">{{ tpl.name }}</div>
             <div style="font-size:12px; color:var(--zima-text-muted); margin-bottom:12px;">Gatilho: {{ tpl.trigger }}</div>
             <ZimaButton size="sm" variant="ghost" style="width:100%;" @click.stop="useFlowTemplate(tpl)">Usar template</ZimaButton>
@@ -925,13 +926,13 @@ const formatRelative = (iso: string) => {
       <!-- Templates de automações -->
       <div>
         <div style="font-size:14px; font-weight:600; color:var(--zima-text-primary); margin-bottom:16px;">Templates de automações</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="grid grid-cols-1 md:grid-cols-2" style="gap:12px;">
           <div
             v-for="tpl in autoTemplates"
             :key="tpl.name"
             style="padding:14px 16px; background:var(--zima-bg-surface-2); border-radius:var(--zima-radius-lg); border:1px solid var(--zima-border-default); display:flex; align-items:flex-start; gap:12px;"
           >
-            <div style="font-size:20px; flex-shrink:0;">{{ tpl.icon }}</div>
+            <Icon :name="tpl.icon" style="width:20px; height:20px; color:var(--zima-blue-core); flex-shrink:0;" />
             <div style="flex:1; min-width:0;">
               <div style="font-size:13px; font-weight:600; color:var(--zima-text-primary); margin-bottom:2px;">{{ tpl.name }}</div>
               <div style="font-size:11px; color:var(--zima-text-muted); margin-bottom:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ tpl.triggerLabel }}</div>

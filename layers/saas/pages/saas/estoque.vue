@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Product, Supplier, StockMovement, ProductCategory, ProductVariation, UnitOfMeasure, MovementType } from '../../composables/useInventory'
+import type { Product, Supplier, StockMovement, ProductVariation, UnitOfMeasure, MovementType } from '../../composables/useInventory'
 
 definePageMeta({ layout: 'saas' })
 
@@ -42,7 +42,7 @@ watch(activeTab, v => router.replace({ query: { tab: v } }))
 // ── Formatação ────────────────────────────────────────────────────────────────
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const fmtN = (v: number) => v.toLocaleString('pt-BR')
+const _fmtN = (v: number) => v.toLocaleString('pt-BR')
 
 // ── Helpers de estoque ────────────────────────────────────────────────────────
 
@@ -77,8 +77,14 @@ const getSupplierName = (supplierId?: string) => {
 
 const productSearch = ref('')
 const productCategoryFilter = ref('all')
-const productStatusFilter = ref('all')
+const productStatusFilter = ref<string>((route.query.status as string) || 'all')
 const viewMode = ref<'table' | 'grid'>('table')
+watch(productStatusFilter, (v) => {
+  const q = { ...route.query }
+  if (v === 'all') delete q.status
+  else q.status = v
+  router.replace({ query: q })
+})
 
 const filteredProducts = computed(() => {
   const q = productSearch.value.toLowerCase()
@@ -268,7 +274,7 @@ const supplierOptions = computed(() => [
   ...suppliers.value.map(s => ({ label: s.name, value: s.id })),
 ])
 
-const openNewProduct = (preselectedProductId?: string) => {
+const openNewProduct = (_preselectedProductId?: string) => {
   productForm.value = defaultProductForm()
   editingProductId.value = null
   productModalMode.value = 'new'
@@ -695,6 +701,44 @@ const reorderRows = computed(() =>
     acao: p.id,
   })),
 )
+
+// ── Exportar produtos como CSV ──────────────────────────────────────────────
+const exportProductsCSV = () => {
+  const rows = filteredProducts.value
+  if (!rows.length) {
+    toast.info('Nenhum produto para exportar.')
+    return
+  }
+  const header = ['SKU', 'Nome', 'Categoria', 'Marca', 'Quantidade', 'Custo', 'Preço de venda', 'Estoque mínimo']
+  const escape = (v: unknown) => {
+    const s = v == null ? '' : String(v)
+    return /[";,\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const lines = [header.join(',')]
+  for (const p of rows) {
+    lines.push([
+      p.sku,
+      p.name,
+      getCategoryName(p.categoryId),
+      p.brand ?? '',
+      p.stock,
+      p.costPrice.toFixed(2).replace('.', ','),
+      p.salePrice.toFixed(2).replace('.', ','),
+      p.minStock,
+    ].map(escape).join(','))
+  }
+  // BOM UTF-8 para acentuação no Excel
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `estoque-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  toast.success(`${rows.length} produtos exportados.`)
+}
 </script>
 
 <template>
@@ -803,7 +847,7 @@ const reorderRows = computed(() =>
               fontSize: '14px',
               outline: 'none',
             }"
-          />
+          >
         </div>
         <ZimaSelect v-model="productCategoryFilter" :options="categoryOptions" style="min-width:160px;" />
         <ZimaSelect v-model="productStatusFilter" :options="statusOptions" style="min-width:160px;" />
@@ -829,7 +873,7 @@ const reorderRows = computed(() =>
             <Icon :name="v.icon" style="width:15px;height:15px;" />
           </button>
         </div>
-        <ZimaButton variant="ghost" size="sm" @click="toast.info('Exportando produtos...')">
+        <ZimaButton variant="ghost" size="sm" @click="exportProductsCSV">
           <Icon name="i-lucide-download" style="width:14px;height:14px;margin-right:6px;" />
           Exportar
         </ZimaButton>
@@ -1070,7 +1114,7 @@ const reorderRows = computed(() =>
             color: 'var(--zima-text-primary)',
             fontSize: '14px',
           }"
-        />
+        >
         <span :style="{ color: 'var(--zima-text-muted)', fontSize: '13px' }">até</span>
         <input
           v-model="movDateTo"
@@ -1084,7 +1128,7 @@ const reorderRows = computed(() =>
             color: 'var(--zima-text-primary)',
             fontSize: '14px',
           }"
-        />
+        >
         <ZimaButton variant="ghost" size="sm" @click="toast.info('Exportando movimentações...')">
           <Icon name="i-lucide-download" style="width:14px;height:14px;margin-right:6px;" />
           Exportar
@@ -1516,7 +1560,7 @@ const reorderRows = computed(() =>
           </div>
         </div>
 
-        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" />
+        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" >
 
         <!-- Seção 2: Classificação -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Classificação</p>
@@ -1540,7 +1584,7 @@ const reorderRows = computed(() =>
                 color: 'var(--zima-text-primary)',
                 fontSize: '14px',
               }"
-            />
+            >
             <datalist id="brand-suggestions">
               <option v-for="b in brandSuggestions" :key="b" :value="b" />
             </datalist>
@@ -1565,7 +1609,7 @@ const reorderRows = computed(() =>
           </div>
         </div>
 
-        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" />
+        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" >
 
         <!-- Seção 3: Preços -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Preços</p>
@@ -1588,7 +1632,7 @@ const reorderRows = computed(() =>
                 color: 'var(--zima-text-primary)',
                 fontSize: '14px',
               }"
-            />
+            >
           </div>
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Preço de Venda (R$) *</label>
@@ -1608,7 +1652,7 @@ const reorderRows = computed(() =>
                 color: 'var(--zima-text-primary)',
                 fontSize: '14px',
               }"
-            />
+            >
           </div>
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Margem de Lucro</label>
@@ -1632,7 +1676,7 @@ const reorderRows = computed(() =>
           </div>
         </div>
 
-        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" />
+        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" >
 
         <!-- Seção 4: Estoque -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Estoque</p>
@@ -1654,7 +1698,7 @@ const reorderRows = computed(() =>
                 color: 'var(--zima-text-primary)',
                 fontSize: '14px',
               }"
-            />
+            >
           </div>
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Estoque Mínimo</label>
@@ -1673,12 +1717,12 @@ const reorderRows = computed(() =>
                 color: 'var(--zima-text-primary)',
                 fontSize: '14px',
               }"
-            />
+            >
           </div>
           <ZimaSelect v-model="productForm.unit" label="Unidade de Medida" :options="unitOptions" />
         </div>
 
-        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" />
+        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" >
 
         <!-- Seção 5: Classificação de uso -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Uso e Disponibilidade</p>
@@ -1691,7 +1735,7 @@ const reorderRows = computed(() =>
           <ZimaSelect v-model="productForm.supplierId" label="Fornecedor" :options="supplierOptions" />
         </div>
 
-        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" />
+        <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '16px 0' }" >
 
         <!-- Seção 6: Variações -->
         <div>
@@ -1719,14 +1763,14 @@ const reorderRows = computed(() =>
                         v-model="v.name"
                         placeholder="Ex: Rosa"
                         :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '13px', outline: 'none' }"
-                      />
+                      >
                     </td>
                     <td :style="{ padding: '6px 12px' }">
                       <input
                         v-model="v.sku"
                         placeholder="SKU-001-A"
                         :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-muted)', fontSize: '12px', fontFamily: 'monospace', outline: 'none' }"
-                      />
+                      >
                     </td>
                     <td :style="{ padding: '6px 12px' }">
                       <input
@@ -1734,7 +1778,7 @@ const reorderRows = computed(() =>
                         type="number"
                         min="0"
                         :style="{ width: '60px', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '13px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }"
-                      />
+                      >
                     </td>
                     <td :style="{ padding: '6px 12px' }">
                       <input
@@ -1744,7 +1788,7 @@ const reorderRows = computed(() =>
                         min="0"
                         placeholder="—"
                         :style="{ width: '80px', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '13px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }"
-                      />
+                      >
                     </td>
                     <td :style="{ padding: '6px 8px', textAlign: 'center' }">
                       <button
@@ -1803,7 +1847,7 @@ const reorderRows = computed(() =>
                 color: 'var(--zima-text-primary)',
                 fontSize: '14px',
               }"
-            />
+            >
           </div>
           <ZimaInput v-model="entryForm.notes" label="Observações" placeholder="Ex: Entregue com avaria na embalagem..." />
         </div>
@@ -1851,7 +1895,7 @@ const reorderRows = computed(() =>
                     type="number"
                     min="1"
                     :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '13px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }"
-                  />
+                  >
                 </td>
                 <td :style="{ padding: '8px 12px' }">
                   <input
@@ -1860,7 +1904,7 @@ const reorderRows = computed(() =>
                     step="0.01"
                     min="0"
                     :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '13px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }"
-                  />
+                  >
                 </td>
                 <td :style="{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', fontFamily: 'monospace', color: 'var(--zima-text-primary)', fontWeight: '500' }">
                   {{ fmt((item.qty || 0) * (item.unitCost || 0)) }}
@@ -1951,7 +1995,7 @@ const reorderRows = computed(() =>
               fontFamily: 'monospace',
               fontWeight: '600',
             }"
-          />
+          >
           <div
             v-if="adjustNewQty !== null && adjustDiff !== 0"
             :style="{
@@ -2113,7 +2157,7 @@ const reorderRows = computed(() =>
               fontFamily: 'monospace',
             }"
             @input="maskCnpj"
-          />
+          >
         </div>
         <div class="grid grid-cols-2 gap-3">
           <ZimaInput v-model="supplierForm.contact" label="Nome do contato" placeholder="Ex: Carlos Mendes" />

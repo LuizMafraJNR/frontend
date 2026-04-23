@@ -11,8 +11,8 @@ const router = useRouter()
 const {
   transactions, receivables, payables, commissions, monthlyData, dreData, loading,
   fetchAll, cancelTransaction, addTransaction,
-  markReceivableReceived, cancelReceivable, addReceivable,
-  markPayablePaid, cancelPayable, addPayable,
+  markReceivableReceived, cancelReceivable,
+  markPayablePaid, cancelPayable,
   payCommission,
   kpiIncome, kpiExpenses, kpiProfit, kpiReceivable, kpiPayable,
 } = useFinancial()
@@ -89,7 +89,6 @@ const kpiChange = (val: number, ref2: number): string => {
 
 const prevIncome = 17900
 const prevExpenses = 11800
-const prevProfit = prevIncome - prevExpenses
 
 // ── Bar chart (overview) ──────────────────────────────────────────────────────
 const CHART_W = 680
@@ -250,11 +249,6 @@ const commissionProfessionalOptions = computed(() => [
 // ── DRE ───────────────────────────────────────────────────────────────────────
 const dreCompareMode = ref(true)
 const dreMarginMode = ref(false)
-
-const dreFormatVal = (val: number) => {
-  if (dreMarginMode.value) return (val / 24560 * 100).toFixed(1) + '%'
-  return formatCurrency(Math.abs(val))
-}
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
 const drawerTxId = ref<string | null>(null)
@@ -470,13 +464,6 @@ const payMethodSelectOptions = [
   { label: 'Crédito', value: 'CREDIT' }, { label: 'Débito', value: 'DEBIT' },
   { label: 'Transferência', value: 'TRANSFER' }, { label: 'Boleto', value: 'BOLETO' },
 ]
-const categoryOptions = [
-  { label: 'Serviço', value: 'SERVICE' }, { label: 'Produto', value: 'PRODUCT' },
-  { label: 'Venda', value: 'SALE' }, { label: 'Salário', value: 'SALARY' },
-  { label: 'Aluguel', value: 'RENT' }, { label: 'Utilidades', value: 'UTILITIES' },
-  { label: 'Marketing', value: 'MARKETING' }, { label: 'Impostos', value: 'TAX' },
-  { label: 'Outro', value: 'OTHER' },
-]
 </script>
 
 <template>
@@ -589,7 +576,8 @@ const categoryOptions = [
           </div>
           <!-- Proportion bar -->
           <div style="height: 4px; background: rgba(239,68,68,0.3); border-radius: 99px; overflow: hidden; margin-top: 6px;">
-            <div style="height: 100%; background: #10B981; border-radius: 99px; transition: width 500ms;"
+            <div
+style="height: 100%; background: #10B981; border-radius: 99px; transition: width 500ms;"
               :style="{ width: kpiIncome > 0 ? Math.round((kpiProfit / kpiIncome) * 100) + '%' : '0%' }" />
           </div>
         </div>
@@ -715,9 +703,11 @@ const categoryOptions = [
             @click="drawerTxId = tx.id"
           >
             <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
+              <div
+style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
                 :style="{ background: tx.type === 'INCOME' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.10)' }">
-                <Icon :name="tx.type === 'INCOME' ? 'i-lucide-arrow-down-left' : 'i-lucide-arrow-up-right'" style="width: 14px; height: 14px;"
+                <Icon
+:name="tx.type === 'INCOME' ? 'i-lucide-arrow-down-left' : 'i-lucide-arrow-up-right'" style="width: 14px; height: 14px;"
                   :style="{ color: tx.type === 'INCOME' ? '#10B981' : '#EF4444' }" />
               </div>
               <div style="flex: 1; min-width: 0;">
@@ -729,7 +719,8 @@ const categoryOptions = [
               <ZimaBadge :variant="tx.status === 'PAID' ? 'success' : tx.status === 'PENDING' ? 'warning' : 'neutral'" size="sm">
                 {{ tx.status === 'PAID' ? 'Pago' : tx.status === 'PENDING' ? 'Pendente' : 'Cancelado' }}
               </ZimaBadge>
-              <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; min-width: 100px; text-align: right;"
+              <span
+style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; min-width: 100px; text-align: right;"
                 :style="{
                   color: tx.status === 'CANCELLED' ? 'var(--zima-text-muted)' : tx.type === 'INCOME' ? '#10B981' : '#EF4444',
                   textDecoration: tx.status === 'CANCELLED' ? 'line-through' : 'none',
@@ -769,9 +760,11 @@ const categoryOptions = [
         <div style="flex: 1; min-width: 200px;">
           <ZimaInput v-model="recSearch" type="search" placeholder="Buscar receita ou cliente..." />
         </div>
-        <ZimaSelect :model-value="recCatFilter ?? '__all__'" :options="catIncomeOptions" style="min-width: 160px;"
+        <ZimaSelect
+:model-value="recCatFilter ?? '__all__'" :options="catIncomeOptions" style="min-width: 160px;"
           @update:model-value="recCatFilter = $event === '__all__' ? null : ($event as string)" />
-        <ZimaSelect :model-value="recPayFilter ?? '__all__'" :options="payMethodOptions" style="min-width: 160px;"
+        <ZimaSelect
+:model-value="recPayFilter ?? '__all__'" :options="payMethodOptions" style="min-width: 160px;"
           @update:model-value="recPayFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaButton size="sm" variant="ghost" @click="openNewIncome">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 13px; height: 13px;" /></template>
@@ -813,14 +806,16 @@ const categoryOptions = [
             </ZimaBadge>
           </template>
           <template #cell-valor="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
+            <span
+style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
               :style="{ color: (row._raw as Transaction).status === 'CANCELLED' ? 'var(--zima-text-muted)' : '#10B981',
                 textDecoration: (row._raw as Transaction).status === 'CANCELLED' ? 'line-through' : 'none' }">
               +{{ formatCurrency(row.valor as number) }}
             </span>
           </template>
           <template #cell-acoes="{ row }">
-            <button style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
+            <button
+style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
               @click.stop="drawerTxId = row.id as string">Ver</button>
           </template>
         </ZimaTable>
@@ -862,7 +857,8 @@ const categoryOptions = [
               </div>
             </div>
             <div style="height: 6px; background: rgba(148,163,184,0.08); border-radius: 99px; overflow: hidden;">
-              <div style="height: 100%; border-radius: 99px; background: #EF4444; opacity: 0.75; transition: width 500ms;"
+              <div
+style="height: 100%; border-radius: 99px; background: #EF4444; opacity: 0.75; transition: width 500ms;"
                 :style="{ width: Math.round((cat.val / despMaxVal) * 100) + '%' }" />
             </div>
           </div>
@@ -874,9 +870,11 @@ const categoryOptions = [
         <div style="flex: 1; min-width: 200px;">
           <ZimaInput v-model="despSearch" type="search" placeholder="Buscar despesa..." />
         </div>
-        <ZimaSelect :model-value="despCatFilter ?? '__all__'" :options="catExpenseOptions" style="min-width: 160px;"
+        <ZimaSelect
+:model-value="despCatFilter ?? '__all__'" :options="catExpenseOptions" style="min-width: 160px;"
           @update:model-value="despCatFilter = $event === '__all__' ? null : ($event as string)" />
-        <ZimaSelect :model-value="despPayFilter ?? '__all__'" :options="payMethodOptions" style="min-width: 160px;"
+        <ZimaSelect
+:model-value="despPayFilter ?? '__all__'" :options="payMethodOptions" style="min-width: 160px;"
           @update:model-value="despPayFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaButton size="sm" variant="ghost" @click="openNewExpense">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 13px; height: 13px;" /></template>
@@ -915,14 +913,16 @@ const categoryOptions = [
             </ZimaBadge>
           </template>
           <template #cell-valor="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
+            <span
+style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
               :style="{ color: (row._raw as Transaction).status === 'CANCELLED' ? 'var(--zima-text-muted)' : '#EF4444',
                 textDecoration: (row._raw as Transaction).status === 'CANCELLED' ? 'line-through' : 'none' }">
               -{{ formatCurrency(row.valor as number) }}
             </span>
           </template>
           <template #cell-acoes="{ row }">
-            <button style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
+            <button
+style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
               @click.stop="drawerTxId = row.id as string">Ver</button>
           </template>
         </ZimaTable>
@@ -940,7 +940,8 @@ const categoryOptions = [
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiReceivable) }}</div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-top: 2px;">{{ pendRecebiveis.length }} parcelas</div>
         </div>
-        <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);"
+        <div
+style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);"
           :style="{ borderLeftWidth: '3px', borderLeftColor: overdueRecebiveis.length > 0 ? '#EF4444' : 'transparent' }">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">VENCIDO</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #EF4444;">
@@ -962,7 +963,8 @@ const categoryOptions = [
 
       <!-- Filters -->
       <div style="display: flex; align-items: center; gap: 10px;">
-        <ZimaSelect :model-value="recStatusFilter ?? '__all__'" :options="recStatusOptions" style="min-width: 160px;"
+        <ZimaSelect
+:model-value="recStatusFilter ?? '__all__'" :options="recStatusOptions" style="min-width: 160px;"
           @update:model-value="recStatusFilter = $event === '__all__' ? null : ($event as string)" />
         <div style="flex: 1;" />
         <ZimaButton size="sm" @click="toast.info('Abrir modal de novo lançamento a receber')">
@@ -983,7 +985,7 @@ const categoryOptions = [
               :style="{ color: (row._raw as Receivable).status === 'OVERDUE' ? '#EF4444' : 'var(--zima-text-muted)' }"
             >
               {{ formatDate(row.vencimento as string) }}
-              <span v-if="(row._raw as Receivable).status === 'OVERDUE'" style="font-size: 10px; font-weight: 600;"> ⚠</span>
+              <Icon v-if="(row._raw as Receivable).status === 'OVERDUE'" name="i-lucide-alert-triangle" style="width:10px; height:10px; margin-left:4px; display:inline-block; vertical-align:middle;" />
             </span>
           </template>
           <template #cell-descricao="{ row }">
@@ -1043,7 +1045,8 @@ const categoryOptions = [
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiPayable) }}</div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-top: 2px;">{{ pendPayables.length }} contas</div>
         </div>
-        <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);"
+        <div
+style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);"
           :style="{ borderLeftWidth: '3px', borderLeftColor: overduePayables.length > 0 ? '#EF4444' : 'transparent' }">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">VENCIDO</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #EF4444;">
@@ -1066,7 +1069,8 @@ const categoryOptions = [
 
       <!-- Filters -->
       <div style="display: flex; align-items: center; gap: 10px;">
-        <ZimaSelect :model-value="payStatusFilter ?? '__all__'" :options="payStatusOptions" style="min-width: 160px;"
+        <ZimaSelect
+:model-value="payStatusFilter ?? '__all__'" :options="payStatusOptions" style="min-width: 160px;"
           @update:model-value="payStatusFilter = $event === '__all__' ? null : ($event as string)" />
         <div style="flex: 1;" />
         <ZimaButton size="sm" @click="toast.info('Abrir modal de nova conta a pagar')">
@@ -1113,7 +1117,8 @@ const categoryOptions = [
             </ZimaBadge>
           </template>
           <template #cell-valor="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
+            <span
+style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
               :style="{ color: (row._raw as Payable).status === 'PAID' ? 'var(--zima-text-muted)' : '#EF4444' }">
               {{ formatCurrency(row.valor as number) }}
             </span>
@@ -1298,11 +1303,11 @@ const categoryOptions = [
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--zima-text-secondary);">
-            <input type="checkbox" v-model="dreCompareMode" style="width: 14px; height: 14px;" />
+            <input v-model="dreCompareMode" type="checkbox" style="width: 14px; height: 14px;" >
             Comparar com mês anterior
           </label>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--zima-text-secondary);">
-            <input type="checkbox" v-model="dreMarginMode" style="width: 14px; height: 14px;" />
+            <input v-model="dreMarginMode" type="checkbox" style="width: 14px; height: 14px;" >
             Exibir como % da receita
           </label>
           <ZimaButton variant="ghost" size="sm" @click="toast.info('Exportar DRE...')">
@@ -1315,7 +1320,8 @@ const categoryOptions = [
       <!-- DRE Table -->
       <div style="background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); overflow: hidden;">
         <!-- Header row -->
-        <div style="display: grid; padding: 12px 20px; border-bottom: 1px solid var(--zima-border-default); background: var(--zima-bg-surface-3);"
+        <div
+style="display: grid; padding: 12px 20px; border-bottom: 1px solid var(--zima-border-default); background: var(--zima-bg-surface-3);"
           :style="{ gridTemplateColumns: dreCompareMode ? '1fr 140px 140px 100px' : '1fr 140px' }">
           <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted);">Descrição</span>
           <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); text-align: right;">Abr 2026</span>
@@ -1351,7 +1357,8 @@ const categoryOptions = [
           </div>
 
           <!-- Current value -->
-          <span style="text-align: right; font-family: 'Geist Mono', monospace;"
+          <span
+style="text-align: right; font-family: 'Geist Mono', monospace;"
             :style="{
               fontSize: row.isSubtotal ? '14px' : '13px',
               fontWeight: row.isSubtotal ? '700' : '400',
@@ -1367,7 +1374,8 @@ const categoryOptions = [
           </span>
 
           <!-- Variation -->
-          <span v-if="dreCompareMode" style="text-align: right; font-size: 12px; font-weight: 600;"
+          <span
+v-if="dreCompareMode" style="text-align: right; font-size: 12px; font-weight: 600;"
             :style="{ color: row.current >= row.previous ? '#10B981' : '#EF4444' }">
             {{ row.previous !== 0 ? (((row.current - row.previous) / Math.abs(row.previous)) * 100).toFixed(1) + '%' : '—' }}
           </span>
@@ -1399,7 +1407,8 @@ const categoryOptions = [
                 {{ drawerTx.status === 'PAID' ? 'Pago' : drawerTx.status === 'PENDING' ? 'Pendente' : 'Cancelado' }}
               </ZimaBadge>
             </div>
-            <div style="font-family: 'Geist Mono', monospace; font-size: 28px; font-weight: 700;"
+            <div
+style="font-family: 'Geist Mono', monospace; font-size: 28px; font-weight: 700;"
               :style="{
                 color: drawerTx.status === 'CANCELLED' ? 'var(--zima-text-muted)' : drawerTx.type === 'INCOME' ? '#10B981' : '#EF4444',
                 textDecoration: drawerTx.status === 'CANCELLED' ? 'line-through' : 'none',
@@ -1435,7 +1444,8 @@ const categoryOptions = [
             <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); font-weight: 600;">Cliente</span>
             <div class="flex items-center gap-3">
               <ZimaAvatar :name="drawerTx.clientName" size="sm" />
-              <NuxtLink v-if="drawerTx.clientId" :to="'/saas/clientes/' + drawerTx.clientId"
+              <NuxtLink
+v-if="drawerTx.clientId" :to="'/saas/clientes/' + drawerTx.clientId"
                 style="font-size: 13px; font-weight: 500; color: var(--zima-blue-core); text-decoration: none;"
                 @click="drawerOpen = false">{{ drawerTx.clientName }}</NuxtLink>
               <span v-else style="font-size: 13px; color: var(--zima-text-primary);">{{ drawerTx.clientName }}</span>
@@ -1446,7 +1456,8 @@ const categoryOptions = [
             <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); font-weight: 600;">Profissional</span>
             <div class="flex items-center gap-3">
               <ZimaAvatar :name="drawerTx.professionalName" size="sm" />
-              <NuxtLink v-if="drawerTx.professionalId" :to="'/saas/equipe/' + drawerTx.professionalId"
+              <NuxtLink
+v-if="drawerTx.professionalId" :to="'/saas/equipe/' + drawerTx.professionalId"
                 style="font-size: 13px; font-weight: 500; color: var(--zima-blue-core); text-decoration: none;"
                 @click="drawerOpen = false">{{ drawerTx.professionalName }}</NuxtLink>
               <span v-else style="font-size: 13px; color: var(--zima-text-primary);">{{ drawerTx.professionalName }}</span>
@@ -1456,7 +1467,8 @@ const categoryOptions = [
           <div v-if="drawerTx.items?.length" class="flex flex-col gap-1.5">
             <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); font-weight: 600;">Itens</span>
             <div class="rounded-lg overflow-hidden" style="border: 1px solid var(--zima-border-default);">
-              <div v-for="(item, i) in drawerTx.items" :key="i"
+              <div
+v-for="(item, i) in drawerTx.items" :key="i"
                 class="flex items-center justify-between px-3 py-2"
                 :style="{ borderBottom: i < drawerTx.items!.length - 1 ? '1px solid var(--zima-border-divider)' : 'none' }">
                 <span style="font-size: 13px; color: var(--zima-text-primary);">{{ item.name }}</span>
@@ -1477,7 +1489,8 @@ const categoryOptions = [
 
       <template #footer>
         <div class="flex items-center gap-2 w-full">
-          <ZimaButton v-if="drawerTx && drawerTx.status !== 'CANCELLED'" variant="danger" size="sm"
+          <ZimaButton
+v-if="drawerTx && drawerTx.status !== 'CANCELLED'" variant="danger" size="sm"
             @click="handleCancelTx(drawerTx!)">
             <template #icon-left><Icon name="i-lucide-x-circle" style="width: 13px; height: 13px;" /></template>
             Cancelar / Estornar
@@ -1577,7 +1590,8 @@ const categoryOptions = [
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <!-- MODAL: Pagar Comissão -->
     <!-- ════════════════════════════════════════════════════════════════════ -->
-    <ZimaModal v-model="payCommissionOpen" title="Confirmar Pagamento de Comissão" size="sm"
+    <ZimaModal
+v-model="payCommissionOpen" title="Confirmar Pagamento de Comissão" size="sm"
       @update:model-value="payCommissionOpen = $event">
       <div v-if="payingCommission" class="flex flex-col gap-4">
         <div class="flex items-center gap-3">

@@ -140,7 +140,7 @@ const getItemGlobalIdx = (item: CommandItem) =>
               role="combobox"
               :aria-expanded="true"
               :aria-activedescendant="flatItems[activeIdx] ? `cmd-item-${flatItems[activeIdx].id}` : undefined"
-            />
+            >
             <kbd
               class="shrink-0 flex items-center justify-center rounded px-1.5"
               :style="{

@@ -112,7 +112,7 @@ const containerStyle = computed((): Record<string, string> => ({
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
         @focus="isFocused = true; emit('focus', $event)"
         @blur="isFocused = false; emit('blur', $event)"
-      />
+      >
 
       <!-- Loading spinner -->
       <span

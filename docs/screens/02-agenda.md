@@ -52,3 +52,13 @@ PENDING → CONFIRMED → CHECKED_IN → IN_PROGRESS → COMPLETED
 ```
 
 Cada transição adiciona entrada no `statusHistory` com timestamp e label.
+
+## Responsividade
+
+| Breakpoint | Comportamento |
+|-----------|--------------|
+| `< sm` (640px) | Filtros do modo Lista empilham verticalmente; larguras fixas removidas, campos ficam full-width |
+| `< sm` (640px) | Tabela (modo List) oculta coluna `Profissional` — `listColumns` é `computed` filtrado por `isMobile` |
+| `< sm` (640px) | Paginação empilha verticalmente (contagem acima, controles abaixo) |
+
+As colunas visíveis em mobile são: **Horário · Cliente · Serviço · Valor · Status**.

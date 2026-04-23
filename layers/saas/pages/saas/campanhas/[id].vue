@@ -77,7 +77,8 @@ const tableRows = computed(() => {
   return names.slice(0, Math.min(10, total)).map((name, i) => ({
     id: `cli-${i + 1}`,
     name,
-    status: i < total ? '✓ Enviado' : '✗ Falhou',
+    status: i < total ? 'Enviado' : 'Falhou',
+    sent: i < total,
     delivered: i < delivered,
     readTime: i < read ? `${8 + i}:${String(30 + i * 3 % 30).padStart(2, '0')}` : null,
     replied: i < replied ? `"${['Quero agendar', 'Me interessa!', 'Obrigada', 'Que desconto?', 'Ótimo!'][i % 5]}"` : null,
@@ -222,7 +223,9 @@ const tableColumns = [
             </NuxtLink>
           </template>
           <template #cell-status="{ row }">
-            <span :style="{ fontSize:'12px', color: row.status.startsWith('✓') ? '#10B981' : '#EF4444' }">{{ row.status }}</span>
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:12px;" :style="{ color: row.sent ? '#10B981' : '#EF4444' }">
+              <Icon :name="row.sent ? 'i-lucide-check' : 'i-lucide-x'" style="width:12px; height:12px;" />{{ row.status }}
+            </span>
           </template>
           <template #cell-delivered="{ row }">
             <div style="display:flex; justify-content:center;">

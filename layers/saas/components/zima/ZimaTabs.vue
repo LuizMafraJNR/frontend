@@ -12,7 +12,7 @@ export interface ZimaTab {
   disabled?: boolean
 }
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   tabs: ZimaTab[]
   modelValue: string
 }>(), {})
@@ -29,10 +29,13 @@ const select = (tab: ZimaTab) => {
 
 <template>
   <div data-testid="zima-tabs">
-    <!-- Tab list -->
+    <!-- Tab list (scroll horizontal em telas estreitas) -->
+    <div
+      class="overflow-x-auto hide-scrollbar"
+      :style="{ borderBottom: '1px solid var(--zima-border-default)' }"
+    >
     <div
       class="flex items-center"
-      :style="{ borderBottom: '1px solid var(--zima-border-default)' }"
       role="tablist"
     >
       <button
@@ -96,6 +99,7 @@ const select = (tab: ZimaTab) => {
           {{ tab.count }}
         </span>
       </button>
+    </div>
     </div>
 
     <!-- Tab panels -->

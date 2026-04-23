@@ -48,7 +48,7 @@ const appointmentsForView = computed(() => {
     const day = ref.getDay() || 7
     const monday = new Date(ref)
     monday.setDate(ref.getDate() - day + 1)
-    const mondayISO = monday.toISOString().slice(0, 10)
+    const _mondayISO = monday.toISOString().slice(0, 10)
     return appointments.value.filter(a => {
       const d = new Date(a.date + 'T12:00:00')
       const m = new Date(monday)
@@ -197,6 +197,20 @@ const statusOptions = [
   { label: 'Concluído',       value: 'COMPLETED' },
   { label: 'Cancelado',       value: 'CANCELLED' },
 ]
+
+const isMobile = ref(false)
+const checkMobile = () => { isMobile.value = window.innerWidth < 640 }
+onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
+
+const listColumns = computed(() => [
+  { key: 'datetime', label: 'Horário', width: '130px' },
+  { key: 'client', label: 'Cliente' },
+  { key: 'service', label: 'Serviço' },
+  ...(!isMobile.value ? [{ key: 'professional', label: 'Profissional' }] : []),
+  { key: 'price', label: 'Valor', width: '100px' },
+  { key: 'status', label: 'Status', width: '130px' },
+])
 </script>
 
 <template>
@@ -239,7 +253,7 @@ const statusOptions = [
           v-if="viewMode !== 'list'"
           v-model="professionalSelectValue"
           :options="professionalOptions"
-          style="width: 200px;"
+          style="width: 100%; max-width: 200px;"
         />
 
         <!-- Navegação de data -->
@@ -314,17 +328,17 @@ const statusOptions = [
     <!-- ── Visualização: Lista ────────────────────────────────────────────── -->
     <template v-else>
       <!-- Filtros -->
-      <div class="flex items-center gap-3 flex-wrap">
+      <div class="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
         <ZimaInput
           v-model="listSearch"
           placeholder="Buscar por cliente, serviço..."
-          style="width: 240px;"
+          class="w-full sm:w-60"
           @update:model-value="currentPage = 1"
         />
         <ZimaSelect
           v-model="listStatus"
           :options="statusOptions"
-          style="width: 200px;"
+          class="w-full sm:w-[200px]"
           @update:model-value="currentPage = 1"
         />
         <ZimaButton
@@ -339,14 +353,7 @@ const statusOptions = [
 
       <ZimaCard padding="none">
         <ZimaTable
-          :columns="[
-            { key: 'datetime', label: 'Horário', width: '130px' },
-            { key: 'client', label: 'Cliente' },
-            { key: 'service', label: 'Serviço' },
-            { key: 'professional', label: 'Profissional' },
-            { key: 'price', label: 'Valor', width: '100px' },
-            { key: 'status', label: 'Status', width: '130px' },
-          ]"
+          :columns="listColumns"
           :rows="pagedList"
           empty-title="Nenhum agendamento encontrado"
         >
@@ -476,7 +483,7 @@ const statusOptions = [
         <!-- Paginação -->
         <div
           v-if="totalPages > 1"
-          class="flex items-center justify-between px-4 py-3"
+          class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3"
           :style="{ borderTop: '1px solid var(--zima-border-divider)' }"
         >
           <span class="text-xs" :style="{ color: 'var(--zima-text-muted)' }">

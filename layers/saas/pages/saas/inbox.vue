@@ -11,12 +11,66 @@ const {
   conversations, loading, fetchAll,
   assumeConversation, returnToAI, resolveConversation,
   sendMessage, markAsRead, totalUnread, waitingCount,
+  setBlocked,
 } = useInbox()
 const { appointments, fetchAll: fetchAppointments } = useAppointments()
 
 onMounted(async () => {
   await Promise.all([fetchAll(), fetchAppointments()])
 })
+
+// ── Ações do menu 3-dot do header da conversa ────────────────────────────────
+const blockDialogOpen = ref(false)
+
+const onScheduleFollowup = () => {
+  if (!activeConv.value) return
+  moreMenuOpen.value = false
+  const in7 = new Date()
+  in7.setDate(in7.getDate() + 7)
+  agendamentoPrefill.value = { date: in7.toISOString().slice(0, 10), startTime: '10:00' }
+  agendamentoOpen.value = true
+}
+
+const onToggleBlock = () => {
+  if (!activeConv.value) return
+  moreMenuOpen.value = false
+  blockDialogOpen.value = true
+}
+
+const confirmToggleBlock = () => {
+  if (!activeConv.value) return
+  const willBlock = !activeConv.value.blocked
+  setBlocked(activeConv.value.id, willBlock)
+  blockDialogOpen.value = false
+  toast.success(willBlock ? 'Contato bloqueado.' : 'Contato desbloqueado.')
+}
+
+const onExportConversation = () => {
+  if (!activeConv.value) return
+  moreMenuOpen.value = false
+  const conv = activeConv.value
+  const header = `Conversa: ${conv.clientName} (${conv.clientPhone})\nCanal: ${conv.channel}\nExportada em: ${new Date().toLocaleString('pt-BR')}\n\n`
+  const body = conv.messages.map((m) => {
+    const sender = m.sender === 'client'
+      ? conv.clientName
+      : m.sender === 'ai'
+        ? 'IA'
+        : m.senderName || 'Atendente'
+    const when = new Date(m.timestamp).toLocaleString('pt-BR')
+    const text = m.text || (m.type === 'image' ? '[imagem]' : m.type === 'audio' ? '[áudio]' : m.type === 'document' ? `[documento: ${m.mediaName ?? ''}]` : '')
+    return `[${when}] ${sender}: ${text}`
+  }).join('\n')
+  const blob = new Blob([header + body], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `conversa-${conv.clientName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.txt`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  toast.success('Conversa exportada.')
+}
 
 // ── Helpers de formatação ─────────────────────────────────────────────────────
 const formatRelativeTime = (iso: string): string => {
@@ -101,7 +155,10 @@ const STATUS_DOT: Record<string, string> = {
   AI: '#3B82F6', WAITING: '#F59E0B', HUMAN: '#10B981', RESOLVED: '#475569',
 }
 const STATUS_LABEL: Record<string, string> = {
-  AI: '🤖 IA respondendo', WAITING: '⏳ Aguardando atendente', HUMAN: '👤 Você está atendendo', RESOLVED: '✅ Resolvida',
+  AI: 'IA respondendo', WAITING: 'Aguardando atendente', HUMAN: 'Você está atendendo', RESOLVED: 'Resolvida',
+}
+const STATUS_ICON: Record<string, string> = {
+  AI: 'i-lucide-bot', WAITING: 'i-lucide-clock', HUMAN: 'i-lucide-user-check', RESOLVED: 'i-lucide-check-circle',
 }
 const CHANNEL_ICON: Record<string, { icon: string; color: string; label: string }> = {
   whatsapp:  { icon: 'i-lucide-message-circle', color: '#25D366', label: 'WhatsApp' },
@@ -343,6 +400,7 @@ const openAgendamento = () => {
 </script>
 
 <template>
+  <div>
   <!-- Full-width override — cancela o padding do layout pai -->
   <div
     style="
@@ -399,7 +457,7 @@ const openAgendamento = () => {
             background: #111520; border: 1px solid rgba(148,163,184,0.1);
             border-radius: 8px; color: #94A3B8; font-size: 13px; outline: none;
           "
-        />
+        >
       </div>
 
       <!-- Filtros de status (chips) -->
@@ -533,19 +591,29 @@ const openAgendamento = () => {
                 <span style="font-size: 13px; font-weight: 600; color: #F1F5F9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;">{{ conv.clientName }}</span>
                 <span style="font-size: 11px; color: #64748B; flex-shrink: 0;">{{ formatRelativeTime(conv.lastMessageAt) }}</span>
               </div>
-              <p style="font-size: 12px; color: #94A3B8; margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                {{ conv.lastMessageType === 'image' ? '📷 Foto' : conv.lastMessageType === 'audio' ? '🎤 Áudio' : conv.lastMessageType === 'document' ? '📎 Documento' : conv.lastMessage }}
+              <p style="font-size: 12px; color: #94A3B8; margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display:flex; align-items:center; gap:4px;">
+                <template v-if="conv.lastMessageType === 'image'">
+                  <Icon name="i-lucide-image" style="width:12px; height:12px;" />Foto
+                </template>
+                <template v-else-if="conv.lastMessageType === 'audio'">
+                  <Icon name="i-lucide-mic" style="width:12px; height:12px;" />Áudio
+                </template>
+                <template v-else-if="conv.lastMessageType === 'document'">
+                  <Icon name="i-lucide-paperclip" style="width:12px; height:12px;" />Documento
+                </template>
+                <template v-else>{{ conv.lastMessage }}</template>
               </p>
               <div class="flex items-center gap-2">
                 <Icon :name="CHANNEL_ICON[conv.channel].icon" style="width: 13px; height: 13px;" :style="{ color: CHANNEL_ICON[conv.channel].color }" />
                 <span
-                  style="font-size: 11px; padding: 1px 6px; border-radius: 4px;"
+                  style="font-size: 11px; padding: 1px 6px; border-radius: 4px; display:inline-flex; align-items:center; gap:3px;"
                   :style="{
                     background: conv.status === 'AI' ? 'rgba(99,102,241,0.15)' : conv.status === 'HUMAN' ? 'rgba(16,185,129,0.15)' : conv.status === 'RESOLVED' ? 'rgba(71,85,105,0.2)' : 'rgba(245,158,11,0.15)',
                     color: conv.status === 'AI' ? '#818CF8' : conv.status === 'HUMAN' ? '#10B981' : conv.status === 'RESOLVED' ? '#64748B' : '#F59E0B',
                   }"
                 >
-                  {{ conv.status === 'AI' ? '🤖 IA' : conv.status === 'HUMAN' ? '👤 Humano' : conv.status === 'RESOLVED' ? '✅ Resolvida' : '⏳ Aguardando' }}
+                  <Icon :name="STATUS_ICON[conv.status]" style="width:11px; height:11px;" />
+                  {{ conv.status === 'AI' ? 'IA' : conv.status === 'HUMAN' ? 'Humano' : conv.status === 'RESOLVED' ? 'Resolvida' : 'Aguardando' }}
                 </span>
                 <span v-if="conv.unreadCount > 0" style="margin-left: auto; background: #3B82F6; color: #fff; border-radius: 9999px; font-size: 10px; font-weight: 700; padding: 1px 6px; min-width: 18px; text-align: center;">{{ conv.unreadCount }}</span>
               </div>
@@ -649,17 +717,25 @@ const openAgendamento = () => {
                 "
               >
                 <button
-                  v-for="opt in [
-                    { label: 'Agendar follow-up', icon: 'i-lucide-clock' },
-                    { label: 'Bloquear contato', icon: 'i-lucide-ban' },
-                    { label: 'Exportar conversa', icon: 'i-lucide-download' },
-                  ]"
-                  :key="opt.label"
                   style="width: 100%; text-align: left; padding: 7px 10px; background: transparent; border: none; border-radius: 4px; font-size: 13px; color: var(--zima-text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px;"
-                  @click="toast.info(`${opt.label} em breve`); moreMenuOpen = false"
+                  @click="onScheduleFollowup"
                 >
-                  <Icon :name="opt.icon" style="width: 13px; height: 13px;" />
-                  {{ opt.label }}
+                  <Icon name="i-lucide-clock" style="width: 13px; height: 13px;" />
+                  Agendar follow-up
+                </button>
+                <button
+                  style="width: 100%; text-align: left; padding: 7px 10px; background: transparent; border: none; border-radius: 4px; font-size: 13px; color: var(--zima-text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px;"
+                  @click="onToggleBlock"
+                >
+                  <Icon name="i-lucide-ban" style="width: 13px; height: 13px;" />
+                  {{ activeConv?.blocked ? 'Desbloquear contato' : 'Bloquear contato' }}
+                </button>
+                <button
+                  style="width: 100%; text-align: left; padding: 7px 10px; background: transparent; border: none; border-radius: 4px; font-size: 13px; color: var(--zima-text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px;"
+                  @click="onExportConversation"
+                >
+                  <Icon name="i-lucide-download" style="width: 13px; height: 13px;" />
+                  Exportar conversa
                 </button>
                 <div style="height: 1px; background: var(--zima-border-divider); margin: 4px 0;" />
                 <button
@@ -753,8 +829,8 @@ const openAgendamento = () => {
               <!-- Badge IA -->
               <span
                 v-if="item.message.sender === 'ai'"
-                style="font-size: 10px; color: rgba(129,140,248,0.8); margin-bottom: 3px; margin-right: 4px;"
-              >🤖 IA</span>
+                style="font-size: 10px; color: rgba(129,140,248,0.8); margin-bottom: 3px; margin-right: 4px; display:inline-flex; align-items:center; gap:3px;"
+              ><Icon name="i-lucide-bot" style="width:10px; height:10px;" />IA</span>
               <div
                 style="padding: 10px 14px; border-radius: 12px 12px 4px 12px; max-width: 100%;"
                 :style="{ background: 'rgba(59,130,246,0.12)' }"
@@ -762,9 +838,9 @@ const openAgendamento = () => {
                 <p style="font-size: 14px; color: #F1F5F9; margin: 0; word-break: break-word; white-space: pre-wrap;">{{ item.message.text }}</p>
                 <div style="font-size: 10px; color: #475569; margin-top: 4px; text-align: right; display: flex; align-items: center; gap: 4px; justify-content: flex-end;">
                   <span>{{ item.message.senderName }} · {{ formatTime(item.message.timestamp) }}</span>
-                  <span v-if="item.message.deliveryStatus === 'read'" style="color: #3B82F6;">✓✓</span>
-                  <span v-else-if="item.message.deliveryStatus === 'delivered'" style="color: #64748B;">✓✓</span>
-                  <span v-else-if="item.message.deliveryStatus === 'sent'" style="color: #64748B;">✓</span>
+                  <Icon v-if="item.message.deliveryStatus === 'read'" name="i-lucide-check-check" style="width:12px; height:12px; color:#3B82F6;" />
+                  <Icon v-else-if="item.message.deliveryStatus === 'delivered'" name="i-lucide-check-check" style="width:12px; height:12px; color:#64748B;" />
+                  <Icon v-else-if="item.message.deliveryStatus === 'sent'" name="i-lucide-check" style="width:12px; height:12px; color:#64748B;" />
                 </div>
               </div>
               <!-- Ações hover -->
@@ -904,7 +980,7 @@ const openAgendamento = () => {
                   v-model="quickReplySearch"
                   placeholder="Buscar resposta rápida..."
                   style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: var(--zima-bg-surface-3); border: 1px solid var(--zima-border-default); border-radius: 6px; color: var(--zima-text-primary); font-size: 12px; outline: none; margin-bottom: 6px;"
-                />
+                >
                 <div v-for="qr in filteredQuickReplies" :key="qr.title">
                   <button
                     style="width: 100%; text-align: left; padding: 8px 10px; background: transparent; border: none; border-radius: 6px; cursor: pointer; transition: background 150ms;"
@@ -1072,7 +1148,7 @@ const openAgendamento = () => {
             placeholder="Adicionar nota..."
             style="flex: 1; padding: 6px 10px; background: rgba(148,163,184,0.06); border: 1px solid rgba(148,163,184,0.1); border-radius: 6px; color: #94A3B8; font-size: 12px; outline: none;"
             @keydown.enter="addNote"
-          />
+          >
         </div>
         <div
           v-for="note in internalNotes"
@@ -1103,7 +1179,7 @@ const openAgendamento = () => {
           placeholder="Adicionar tag..."
           style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(148,163,184,0.06); border: 1px solid rgba(148,163,184,0.1); border-radius: 6px; color: #94A3B8; font-size: 12px; outline: none;"
           @keydown.enter="addTag"
-        />
+        >
       </div>
     </div>
   </div>
@@ -1145,6 +1221,25 @@ const openAgendamento = () => {
 
   <!-- Modal novo agendamento -->
   <ModalNovoAgendamento v-model="agendamentoOpen" :prefill="agendamentoPrefill" />
+
+  <!-- Confirmação de (des)bloqueio de contato -->
+  <ZimaModal v-model="blockDialogOpen" :title="activeConv?.blocked ? 'Desbloquear contato' : 'Bloquear contato'" size="sm">
+    <div style="font-size: 13px; color: var(--zima-text-primary); line-height: 1.6;">
+      <p v-if="activeConv?.blocked">
+        Desbloquear <strong>{{ activeConv.clientName }}</strong>? Mensagens voltarão a ser recebidas normalmente.
+      </p>
+      <p v-else>
+        Bloquear <strong>{{ activeConv?.clientName }}</strong>? Novas mensagens desse contato serão ignoradas até você desbloquear.
+      </p>
+    </div>
+    <template #footer>
+      <ZimaButton variant="ghost" @click="blockDialogOpen = false">Cancelar</ZimaButton>
+      <ZimaButton :variant="activeConv?.blocked ? 'primary' : 'danger'" @click="confirmToggleBlock">
+        {{ activeConv?.blocked ? 'Desbloquear' : 'Bloquear' }}
+      </ZimaButton>
+    </template>
+  </ZimaModal>
+  </div>
 </template>
 
 <style scoped>

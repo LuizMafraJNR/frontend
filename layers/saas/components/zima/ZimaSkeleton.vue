@@ -7,7 +7,7 @@
 
 type SkeletonPreset = 'text' | 'title' | 'avatar' | 'block' | 'custom'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   preset?: SkeletonPreset
   width?: string
   height?: string

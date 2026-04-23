@@ -1,14 +1,36 @@
 /**
  * Estado global do layout SaaS.
- * Controla: sidebar collapsed, command palette, notificações.
+ * Controla: sidebar collapsed, command palette, notificações, viewport mobile.
  */
+const MOBILE_BREAKPOINT = 1024
+
+let resizeListenerAttached = false
+
 export const useSaasLayout = () => {
   const sidebarCollapsed = useState<boolean>('saas:sidebar:collapsed', () => false)
+  const sidebarMobileOpen = useState<boolean>('saas:sidebar:mobile-open', () => false)
   const commandPaletteOpen = useState<boolean>('saas:command:open', () => false)
   const notificationsOpen = useState<boolean>('saas:notifications:open', () => false)
+  const isMobile = useState<boolean>('saas:is-mobile', () => false)
+
+  // Um único listener global de resize, em vez de um por componente
+  if (import.meta.client && !resizeListenerAttached) {
+    resizeListenerAttached = true
+    const update = () => { isMobile.value = window.innerWidth < MOBILE_BREAKPOINT }
+    update()
+    window.addEventListener('resize', update, { passive: true })
+  }
 
   const toggleSidebar = () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
+  }
+
+  const toggleSidebarMobile = () => {
+    sidebarMobileOpen.value = !sidebarMobileOpen.value
+  }
+
+  const closeSidebarMobile = () => {
+    sidebarMobileOpen.value = false
   }
 
   const openCommandPalette = () => {
@@ -37,9 +59,13 @@ export const useSaasLayout = () => {
 
   return {
     sidebarCollapsed,
+    sidebarMobileOpen,
     commandPaletteOpen,
     notificationsOpen,
+    isMobile,
     toggleSidebar,
+    toggleSidebarMobile,
+    closeSidebarMobile,
     openCommandPalette,
     closeCommandPalette,
     setupCommandPaletteShortcut,

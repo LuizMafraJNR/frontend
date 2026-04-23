@@ -362,45 +362,45 @@ const formatRole = (role: string) => roleLabels[role] ?? role
 
 <template>
   <!-- TODO: i18n -->
-  <div class="flex gap-6" style="min-height: calc(100vh - var(--zima-topbar-height) - 48px);">
+  <div class="flex flex-col lg:flex-row gap-6" style="min-height: calc(100vh - var(--zima-topbar-height) - 48px);">
 
-    <!-- Sub-nav vertical -->
-    <aside
-      class="flex-shrink-0 flex flex-col gap-1"
-      style="width: 220px; position: sticky; top: 24px; align-self: flex-start;"
-    >
+    <!-- Sub-nav: vertical em lg+, scroll horizontal em mobile/tablet -->
+    <aside class="flex-shrink-0 lg:w-[220px] lg:sticky lg:top-6 lg:self-start">
       <div
+        class="hidden lg:block"
         style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--zima-text-muted); text-transform: uppercase; margin-bottom: 8px; padding: 0 8px;"
       >
         Configurações
       </div>
-      <button
-        v-for="section in sections"
-        :key="section.key"
-        class="flex items-center gap-3 text-left rounded-lg transition-all"
-        :style="{
-          padding: '8px 10px',
-          fontSize: '14px',
-          fontWeight: activeSection === section.key ? '500' : '400',
-          color: activeSection === section.key ? 'var(--zima-blue-core)' : 'var(--zima-text-secondary)',
-          background: activeSection === section.key ? 'rgba(59,130,246,0.1)' : 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          width: '100%',
-        }"
-        @click="activeSection = section.key"
-      >
-        <Icon
-          :name="section.icon"
+      <div class="flex lg:flex-col gap-1 overflow-x-auto hide-scrollbar" style="border-bottom: 1px solid var(--zima-border-divider); padding-bottom: 8px;">
+        <button
+          v-for="section in sections"
+          :key="section.key"
+          class="flex items-center gap-3 text-left rounded-lg transition-all whitespace-nowrap"
           :style="{
-            width: '16px',
-            height: '16px',
+            padding: '8px 12px',
+            fontSize: '14px',
+            fontWeight: activeSection === section.key ? '500' : '400',
+            color: activeSection === section.key ? 'var(--zima-blue-core)' : 'var(--zima-text-secondary)',
+            background: activeSection === section.key ? 'rgba(59,130,246,0.1)' : 'transparent',
+            border: 'none',
+            cursor: 'pointer',
             flexShrink: '0',
-            color: activeSection === section.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
           }"
-        />
-        {{ section.label }}
-      </button>
+          @click="activeSection = section.key"
+        >
+          <Icon
+            :name="section.icon"
+            :style="{
+              width: '16px',
+              height: '16px',
+              flexShrink: '0',
+              color: activeSection === section.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
+            }"
+          />
+          {{ section.label }}
+        </button>
+      </div>
     </aside>
 
     <!-- Conteúdo -->
@@ -442,7 +442,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
                   :src="logoPreviewUrl"
                   alt="Logo preview"
                   style="width: 100%; height: 100%; object-fit: cover;"
-                />
+                >
                 <template v-else>
                   <Icon name="i-lucide-image-plus" style="width: 22px; height: 22px; color: var(--zima-text-muted);" />
                 </template>
@@ -453,7 +453,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
                 accept="image/jpeg,image/png,image/svg+xml"
                 style="display: none;"
                 @change="handleLogoSelect"
-              />
+              >
             </div>
             <div style="padding-top: 24px;">
               <p style="font-size: 13px; color: var(--zima-text-muted); margin: 0 0 6px;">

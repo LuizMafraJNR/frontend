@@ -121,9 +121,25 @@
      ====================================================== */
   --zima-sidebar-width:          240px;
   --zima-sidebar-width-collapsed: 64px;
+  --zima-sidebar-drawer-width:   280px;
   --zima-topbar-height:          56px;
   --zima-content-max-width:      1280px;
   --zima-content-padding:        24px;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --zima-content-padding: 16px;
+  }
+}
+
+@media (max-width: 639px) {
+  :root {
+    --zima-content-padding: 12px;
+  }
+}
+
+:root {
 
   /* ======================================================
      TRANSIÇÕES — Curtas e profissionais

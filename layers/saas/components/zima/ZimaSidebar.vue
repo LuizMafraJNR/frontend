@@ -19,19 +19,25 @@ interface Props {
   activeKey?: string
   logo?: string
   appName?: string
+  mobileOpen?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   activeKey: '',
   appName: 'Onyra',
+  mobileOpen: false,
 })
 
 const emit = defineEmits<{
   navigate: [item: SidebarNavItem]
+  close: []
 }>()
 
 const { sidebarCollapsed, toggleSidebar } = useSaasLayout()
 
+// Gates mobile/desktop são feitos por CSS media query (via classes e data-attrs)
+// para evitar flicker de hidratação. Em mobile, CSS força sidebar expandida
+// independente de sidebarCollapsed, e aplica width/transform/z-index do drawer.
 const handleItemClick = (item: SidebarNavItem) => {
   emit('navigate', item)
 }
@@ -40,18 +46,18 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
 </script>
 
 <template>
-  <!-- Sidebar wrapper -->
+  <!-- Sidebar wrapper — gates visuais via CSS media query (ver <style>) -->
   <aside
-    :class="[
-      'flex flex-col h-screen fixed left-0 top-0 transition-all duration-200 ease-default',
-      'border-r overflow-hidden shrink-0',
-      sidebarCollapsed ? 'w-16' : 'w-60',
-    ]"
+    class="zima-sidebar flex flex-col fixed left-0 top-0 h-screen border-r overflow-hidden shrink-0"
+    :class="{
+      'zima-sidebar--collapsed': sidebarCollapsed,
+      'zima-sidebar--mobile-open': mobileOpen,
+    }"
     :style="{
       background: 'var(--zima-bg-surface-1)',
       borderColor: 'var(--zima-border-default)',
-      zIndex: 'var(--zima-z-sidebar)',
     }"
+    :aria-hidden="mobileOpen ? undefined : null"
     data-testid="zima-sidebar"
   >
     <!-- Logo / App Name -->
@@ -59,7 +65,7 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
       class="flex items-center gap-3 shrink-0"
       :style="{
         height: 'var(--zima-topbar-height)',
-        padding: sidebarCollapsed ? '0 20px' : '0 20px',
+        padding: '0 20px',
         borderBottom: '1px solid var(--zima-border-default)',
       }"
     >
@@ -74,25 +80,33 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
         </svg>
       </div>
 
-      <!-- App name (hidden when collapsed) -->
-      <Transition name="zima-fade">
-        <span
-          v-if="!sidebarCollapsed"
-          class="font-semibold text-sm whitespace-nowrap"
-          :style="{ color: 'var(--zima-text-primary)', fontFamily: 'var(--zima-font-display)' }"
-        >
-          {{ appName }}
-        </span>
-      </Transition>
+      <!-- App name — v-show permite CSS forçar visível em mobile -->
+      <span
+        v-show="!sidebarCollapsed"
+        class="zima-sidebar__app-name font-semibold text-sm whitespace-nowrap"
+        :style="{ color: 'var(--zima-text-primary)', fontFamily: 'var(--zima-font-display)' }"
+      >
+        {{ appName }}
+      </span>
+
+      <!-- Botão fechar drawer — visível apenas em mobile via CSS -->
+      <button
+        class="zima-sidebar__close ml-auto flex items-center justify-center rounded-md shrink-0"
+        style="width: 28px; height: 28px; color: var(--zima-text-muted); background: transparent; border: none;"
+        aria-label="Fechar menu"
+        @click="emit('close')"
+      >
+        <Icon name="i-lucide-x" style="width: 16px; height: 16px;" aria-hidden="true" />
+      </button>
     </div>
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden py-3" aria-label="Navegação principal">
       <template v-for="group in groups" :key="group.key">
-        <!-- Group header -->
+        <!-- Group header — expandido -->
         <div
-          v-if="!sidebarCollapsed"
-          class="px-5 pt-4 pb-1"
+          v-show="!sidebarCollapsed"
+          class="zima-sidebar__group-label px-5 pt-4 pb-1"
           :style="{
             fontSize: '11px',
             fontWeight: '600',
@@ -104,7 +118,11 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
         >
           {{ group.label }}
         </div>
-        <div v-else class="pt-4 pb-1 flex justify-center">
+        <!-- Group divider — colapsado (só desktop) -->
+        <div
+          v-show="sidebarCollapsed"
+          class="zima-sidebar__group-divider pt-4 pb-1 flex justify-center"
+        >
           <div
             class="w-4 h-px"
             :style="{ background: 'var(--zima-border-default)' }"
@@ -119,14 +137,8 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
               :is="item.to ? 'a' : 'button'"
               :href="item.to"
               type="button"
-              :aria-label="sidebarCollapsed ? item.label : undefined"
               :aria-current="isActive(item) ? 'page' : undefined"
-              :class="[
-                'w-full flex items-center gap-3 rounded-md text-sm font-medium',
-                'transition-all duration-[150ms] focus-visible:outline-none',
-                'focus-visible:ring-2 focus-visible:ring-[var(--zima-focus-outline)]',
-                sidebarCollapsed ? 'justify-center px-0 h-10' : 'px-3 h-9',
-              ]"
+              class="zima-sidebar__item w-full flex items-center gap-3 rounded-md text-sm font-medium transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--zima-focus-outline)]"
               :style="isActive(item) ? {
                 background: 'var(--zima-sidebar-item-active-bg)',
                 color: 'var(--zima-sidebar-item-active-color)',
@@ -157,40 +169,39 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
                 aria-hidden="true"
               />
 
-              <!-- Label (hidden when collapsed) -->
-              <Transition name="zima-fade">
-                <span v-if="!sidebarCollapsed" class="flex-1 text-left truncate">
-                  {{ item.label }}
-                </span>
-              </Transition>
+              <!-- Label — v-show permite CSS forçar visível em mobile -->
+              <span
+                v-show="!sidebarCollapsed"
+                class="zima-sidebar__item-label flex-1 text-left truncate"
+              >
+                {{ item.label }}
+              </span>
 
               <!-- Badge -->
-              <Transition name="zima-fade">
-                <span
-                  v-if="!sidebarCollapsed && item.badge"
-                  class="inline-flex items-center justify-center rounded-full text-white shrink-0"
-                  :style="{
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    minWidth: '18px',
-                    height: '18px',
-                    padding: '0 4px',
-                    background: 'var(--zima-badge-danger-bg)',
-                  }"
-                  :aria-label="`${item.badge} notificações`"
-                >
-                  {{ item.badge > 99 ? '99+' : item.badge }}
-                </span>
-              </Transition>
+              <span
+                v-show="!sidebarCollapsed && !!item.badge"
+                class="zima-sidebar__item-badge inline-flex items-center justify-center rounded-full text-white shrink-0"
+                :style="{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  minWidth: '18px',
+                  height: '18px',
+                  padding: '0 4px',
+                  background: 'var(--zima-badge-danger-bg)',
+                }"
+                :aria-label="item.badge ? `${item.badge} notificações` : undefined"
+              >
+                {{ item.badge && item.badge > 99 ? '99+' : item.badge }}
+              </span>
             </component>
           </li>
         </ul>
       </template>
     </nav>
 
-    <!-- Collapse toggle -->
+    <!-- Collapse toggle — desktop only (CSS esconde em mobile) -->
     <div
-      class="shrink-0 p-2"
+      class="zima-sidebar__collapse-toggle shrink-0 p-2"
       :style="{ borderTop: '1px solid var(--zima-border-default)' }"
     >
       <button
@@ -213,21 +224,82 @@ const isActive = (item: SidebarNavItem) => item.key === props.activeKey
           style="width: 16px; height: 16px; stroke-width: 1.5px;"
           aria-hidden="true"
         />
-        <Transition name="zima-fade">
-          <span v-if="!sidebarCollapsed" class="ml-2 text-sm">Colapsar</span>
-        </Transition>
+        <span v-show="!sidebarCollapsed" class="ml-2 text-sm">Colapsar</span>
       </button>
     </div>
   </aside>
 </template>
 
 <style scoped>
-.zima-fade-enter-active,
-.zima-fade-leave-active {
-  transition: opacity 150ms ease;
+/* ------------------------------------------------------------------
+ * Gates mobile/desktop via media query — evita flicker de hidratação
+ * Breakpoint: 1024px (igual ao `lg:` do Tailwind)
+ * ------------------------------------------------------------------ */
+
+/* DESKTOP (>=1024px) — comportamento fixo com colapso */
+@media (min-width: 1024px) {
+  .zima-sidebar {
+    width: var(--zima-sidebar-width);
+    transform: none;
+    z-index: var(--zima-z-sidebar);
+    transition: width 200ms ease;
+  }
+  .zima-sidebar.zima-sidebar--collapsed {
+    width: var(--zima-sidebar-width-collapsed);
+  }
+  /* Botão X não aparece em desktop */
+  .zima-sidebar__close {
+    display: none;
+  }
 }
-.zima-fade-enter-from,
-.zima-fade-leave-to {
-  opacity: 0;
+
+/* MOBILE (<1024px) — drawer off-canvas */
+@media (max-width: 1023.98px) {
+  .zima-sidebar {
+    width: var(--zima-sidebar-drawer-width);
+    transform: translateX(-100%);
+    z-index: var(--zima-z-overlay);
+    transition: transform 220ms ease;
+  }
+  .zima-sidebar.zima-sidebar--mobile-open {
+    transform: translateX(0);
+  }
+  /* Em mobile, a sidebar é sempre "expandida" — sobrescreve o v-show colapsado */
+  .zima-sidebar .zima-sidebar__app-name,
+  .zima-sidebar .zima-sidebar__group-label,
+  .zima-sidebar .zima-sidebar__item-label,
+  .zima-sidebar .zima-sidebar__item-badge {
+    display: revert !important;
+  }
+  /* Ocultar divider de grupo colapsado (só faz sentido em desktop) */
+  .zima-sidebar .zima-sidebar__group-divider {
+    display: none !important;
+  }
+  /* Botão de colapsar não se aplica em mobile */
+  .zima-sidebar__collapse-toggle {
+    display: none;
+  }
+  /* Item sempre em modo expandido (px-3 h-9) */
+  .zima-sidebar__item {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    height: 2.25rem;
+    justify-content: flex-start;
+  }
+}
+
+/* DESKTOP — aplicar classes utility de forma explícita em substituição ao Tailwind dinâmico */
+@media (min-width: 1024px) {
+  .zima-sidebar .zima-sidebar__item {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    height: 2.25rem;
+  }
+  .zima-sidebar.zima-sidebar--collapsed .zima-sidebar__item {
+    padding-left: 0;
+    padding-right: 0;
+    height: 2.5rem;
+    justify-content: center;
+  }
 }
 </style>

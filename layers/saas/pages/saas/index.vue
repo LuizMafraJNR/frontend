@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import DrawerDetalheAgendamento from './DrawerDetalheAgendamento.vue'
+import ModalNovoAgendamento from './ModalNovoAgendamento.vue'
+import ModalCliente from './ModalCliente.vue'
 import { STATUS_STYLE } from '../../composables/useAppointments'
 
 definePageMeta({ layout: 'saas' })
 
 const toast = useZimaToast()
-const router = useRouter()
 
 // ── Agendamentos do dia (via composable) ──────────────────────────────────────
 const { appointments, fetchAll: fetchAppointments } = useAppointments()
 onMounted(() => fetchAppointments())
+
+// ── Modais disparados pelas ações rápidas do header ───────────────────────────
+const showAgendamentoModal = ref(false)
+const showClienteModal = ref(false)
 
 const today = new Date().toISOString().slice(0, 10)
 const agendaDeHoje = computed(() =>
@@ -38,15 +43,50 @@ type PeriodoKey = typeof periodos[number]['key']
 const periodoAtivo = ref<PeriodoKey>('30d')
 const isLoading    = ref(false)
 
-const setPeriodo = (key: PeriodoKey) => {
+// Date-range picker (popover "Personalizado")
+const customRangeOpen = ref(false)
+const customRangeStart = ref('')
+const customRangeEnd = ref('')
+const customRangeAnchor = ref<HTMLElement | null>(null)
+
+const setPeriodo = (key: PeriodoKey, ev?: MouseEvent) => {
   if (key === 'custom') {
-    toast.info('Seletor de período personalizado em breve')
+    customRangeAnchor.value = ev?.currentTarget as HTMLElement | null
+    customRangeOpen.value = !customRangeOpen.value
     return
   }
   periodoAtivo.value = key
+  customRangeOpen.value = false
   isLoading.value = true
   setTimeout(() => { isLoading.value = false }, 600)
 }
+
+const applyCustomRange = () => {
+  if (!customRangeStart.value || !customRangeEnd.value) {
+    toast.info('Selecione data inicial e final.')
+    return
+  }
+  if (customRangeEnd.value < customRangeStart.value) {
+    toast.info('Data final deve ser maior ou igual à inicial.')
+    return
+  }
+  periodoAtivo.value = 'custom'
+  customRangeOpen.value = false
+  isLoading.value = true
+  setTimeout(() => { isLoading.value = false }, 600)
+}
+
+// Fecha o popover ao clicar fora
+const onDocumentClickCustomRange = (e: MouseEvent) => {
+  if (!customRangeOpen.value) return
+  const target = e.target as Node
+  if (customRangeAnchor.value && customRangeAnchor.value.contains(target)) return
+  const popover = document.getElementById('dashboard-custom-range-popover')
+  if (popover && popover.contains(target)) return
+  customRangeOpen.value = false
+}
+onMounted(() => document.addEventListener('click', onDocumentClickCustomRange))
+onUnmounted(() => document.removeEventListener('click', onDocumentClickCustomRange))
 
 // ── Saudação dinâmica ────────────────────────────────────────────────────────
 const saudacao = computed(() => {
@@ -173,17 +213,9 @@ const isAgoraDentroExpediente = computed(() => {
   return mins >= HOUR_START * 60 && mins <= (HOUR_START + 12) * 60
 })
 
-// ── Atividade recente ─────────────────────────────────────────────────────────
-const atividades = [
-  { icon: 'i-lucide-calendar-plus', cor: 'var(--zima-blue-light)',  desc: 'Novo agendamento: Maria Silva — Corte Feminino — 16:00',  tempo: 'há 5 min',  to: '/saas/agenda' },
-  { icon: 'i-lucide-credit-card',   cor: 'var(--zima-success)',     desc: 'Venda registrada: R$ 145,00 — João Santos',               tempo: 'há 12 min', to: '/saas/financeiro' },
-  { icon: 'i-lucide-star',          cor: 'var(--zima-warning)',     desc: 'Nova avaliação: 5 estrelas — Ana Costa',                  tempo: 'há 1h',     to: '/saas/clientes' },
-  { icon: 'i-lucide-user-plus',     cor: 'var(--zima-blue-light)',  desc: 'Novo cliente cadastrado: Pedro Lima',                     tempo: 'há 2h',     to: '/saas/clientes' },
-  { icon: 'i-lucide-calendar-x',    cor: 'var(--zima-danger)',      desc: 'Cancelamento: Rafael Torres — Barba (reagendado)',        tempo: 'há 2h',     to: '/saas/agenda' },
-  { icon: 'i-lucide-credit-card',   cor: 'var(--zima-success)',     desc: 'Venda registrada: R$ 89,00 (Cartão) — Beatriz Souza',    tempo: 'há 3h',     to: '/saas/financeiro' },
-  { icon: 'i-lucide-message-square',cor: 'var(--zima-info)',        desc: 'Mensagem recebida: Fernanda Lima via WhatsApp',           tempo: 'há 4h',     to: '/saas/clientes' },
-  { icon: 'i-lucide-tag',           cor: 'var(--zima-text-muted)',  desc: 'Tag VIP aplicada: Camila Ferreira',                      tempo: 'há 5h',     to: '/saas/clientes' },
-]
+// ── Atividade recente (via composable) ───────────────────────────────────────
+const { activity: atividades, fetchAll: fetchActivity } = useDashboardActivity()
+onMounted(() => fetchActivity())
 
 // ── Alertas inteligentes ──────────────────────────────────────────────────────
 interface Alerta {
@@ -198,7 +230,7 @@ interface Alerta {
 const alertasDismissed = ref<string[]>([])
 
 const alertas: Alerta[] = [
-  { id: 'a1', tipo: 'warning', icon: 'i-lucide-package',      msg: 'Estoque de Hidratação L\'Oréal abaixo do mínimo (2 unidades)',  acao: 'Repor estoque',  to: '/saas/estoque' },
+  { id: 'a1', tipo: 'warning', icon: 'i-lucide-package',      msg: 'Estoque de Hidratação L\'Oréal abaixo do mínimo (2 unidades)',  acao: 'Repor estoque',  to: '/saas/estoque?tab=produtos&status=low' },
   { id: 'a2', tipo: 'info',    icon: 'i-lucide-cake',         msg: '5 clientes fazem aniversário esta semana',                      acao: 'Ver lista',      to: '/saas/clientes?birthdayThisWeek=true' },
   { id: 'a3', tipo: 'danger',  icon: 'i-lucide-alert-circle', msg: '3 contas a receber vencidas — total R$ 450,00',                acao: 'Ver cobranças',  to: '/saas/financeiro?tab=receivables&status=OVERDUE' },
 ]
@@ -216,13 +248,18 @@ const ALERTA_COLOR: Record<string, string> = {
 const dismissAlerta = (id: string) => {
   alertasDismissed.value.push(id)
 }
+
+const isMobile = ref(false)
+const checkMobile = () => { isMobile.value = window.innerWidth < 1024 }
+onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
 </script>
 
 <template>
   <div data-testid="dashboard-page">
 
     <!-- ── 1.1 Header ──────────────────────────────────────────────────────── -->
-    <div class="flex items-start justify-between mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
       <!-- Saudação + data -->
       <div>
         <h1
@@ -241,7 +278,7 @@ const dismissAlerta = (id: string) => {
       </div>
 
       <!-- Direita: período + ações rápidas -->
-      <div class="flex items-center gap-3">
+      <div class="relative flex flex-wrap items-center gap-2 sm:gap-3">
         <!-- Seletor de período -->
         <div
           class="flex items-center rounded-lg p-1 gap-0.5"
@@ -265,14 +302,69 @@ const dismissAlerta = (id: string) => {
               fontSize: '12px',
             }"
             :aria-pressed="periodoAtivo === p.key"
-            @click="setPeriodo(p.key as PeriodoKey)"
+            @click="(e) => setPeriodo(p.key as PeriodoKey, e)"
           >
             {{ p.label }}
           </button>
         </div>
 
+        <!-- Popover de período personalizado -->
+        <div
+          v-if="customRangeOpen"
+          id="dashboard-custom-range-popover"
+          class="flex flex-col gap-3"
+          :style="{
+            position: 'absolute',
+            top: '100%',
+            right: '0',
+            marginTop: '8px',
+            zIndex: 60,
+            background: 'var(--zima-bg-surface-3)',
+            border: '1px solid var(--zima-border-modal)',
+            borderRadius: 'var(--zima-radius-md)',
+            boxShadow: 'var(--zima-shadow-dropdown)',
+            padding: '16px',
+            minWidth: '280px',
+            maxWidth: 'min(280px, calc(100vw - 32px))',
+          }"
+          @click.stop
+        >
+          <div class="flex flex-col gap-2">
+            <label class="text-xs font-medium" :style="{ color: 'var(--zima-text-secondary)' }">Data inicial</label>
+            <input
+              v-model="customRangeStart"
+              type="date"
+              class="px-3 text-sm rounded-md outline-none"
+              :style="{
+                height: '34px',
+                background: 'var(--zima-bg-surface-2)',
+                border: '1px solid var(--zima-border-default)',
+                color: 'var(--zima-text-primary)',
+              }"
+            >
+          </div>
+          <div class="flex flex-col gap-2">
+            <label class="text-xs font-medium" :style="{ color: 'var(--zima-text-secondary)' }">Data final</label>
+            <input
+              v-model="customRangeEnd"
+              type="date"
+              class="px-3 text-sm rounded-md outline-none"
+              :style="{
+                height: '34px',
+                background: 'var(--zima-bg-surface-2)',
+                border: '1px solid var(--zima-border-default)',
+                color: 'var(--zima-text-primary)',
+              }"
+            >
+          </div>
+          <div class="flex items-center justify-end gap-2 mt-1">
+            <ZimaButton variant="ghost" size="sm" @click="customRangeOpen = false">Cancelar</ZimaButton>
+            <ZimaButton variant="primary" size="sm" @click="applyCustomRange">Aplicar</ZimaButton>
+          </div>
+        </div>
+
         <!-- Quick actions -->
-        <ZimaButton variant="secondary" size="sm" @click="navigateTo('/saas/agenda')">
+        <ZimaButton variant="secondary" size="sm" @click="showAgendamentoModal = true">
           <template #icon-left>
             <Icon name="i-lucide-calendar-plus" style="width: 14px; height: 14px;" />
           </template>
@@ -286,7 +378,7 @@ const dismissAlerta = (id: string) => {
           + Venda
         </ZimaButton>
 
-        <ZimaButton variant="primary" size="sm" @click="navigateTo('/saas/clientes')">
+        <ZimaButton variant="primary" size="sm" @click="showClienteModal = true">
           <template #icon-left>
             <Icon name="i-lucide-user-plus" style="width: 14px; height: 14px;" />
           </template>
@@ -296,7 +388,7 @@ const dismissAlerta = (id: string) => {
     </div>
 
     <!-- ── 1.2 KPI Cards ──────────────────────────────────────────────────── -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
       <template v-if="isLoading">
         <ZimaSkeleton v-for="i in 4" :key="i" preset="card" height="120px" />
       </template>
@@ -408,7 +500,7 @@ const dismissAlerta = (id: string) => {
     </TransitionGroup>
 
     <!-- ── 1.4 Seção inferior: Agenda + Atividade ─────────────────────────── -->
-    <div class="grid gap-4" style="grid-template-columns: 7fr 5fr;">
+    <div class="grid gap-4 grid-cols-1 xl:[grid-template-columns:7fr_5fr]">
 
       <!-- Agenda de Hoje ──────────────────────────────────────── -->
       <ZimaCard padding="none">
@@ -436,10 +528,41 @@ const dismissAlerta = (id: string) => {
           </div>
         </template>
 
-        <!-- Timeline posicionada por horário -->
+        <!-- Mobile: lista de cards empilhados -->
+        <div v-if="isMobile" class="flex flex-col divide-y" :style="{ borderColor: 'var(--zima-border-divider)' }">
+          <div v-if="agendaDeHoje.length === 0" class="flex flex-col items-center py-8 gap-2">
+            <Icon name="i-lucide-calendar-x" style="width: 28px; height: 28px;" :style="{ color: 'var(--zima-text-muted)' }" />
+            <p class="text-sm" :style="{ color: 'var(--zima-text-muted)' }">Nenhum agendamento hoje.</p>
+          </div>
+          <div
+            v-for="apt in agendaDeHoje"
+            :key="apt.id"
+            class="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
+            :style="{ borderLeft: `3px solid ${STATUS_STYLE[apt.status].border}` }"
+            @click="drawerDetalheId = apt.id"
+            @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-hover)'"
+            @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = ''"
+          >
+            <div class="flex flex-col shrink-0 items-end" style="min-width: 44px;">
+              <span class="text-xs font-medium" :style="{ color: 'var(--zima-text-muted)', fontFamily: 'var(--zima-font-mono)' }">
+                {{ apt.startTime }}
+              </span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate" :style="{ color: 'var(--zima-text-primary)' }">{{ apt.clientName }}</p>
+              <p class="text-xs truncate" :style="{ color: 'var(--zima-text-muted)' }">{{ apt.serviceName }}</p>
+            </div>
+            <ZimaBadge :variant="STATUS_STYLE[apt.status].variant" size="sm">
+              {{ STATUS_STYLE[apt.status].label }}
+            </ZimaBadge>
+          </div>
+        </div>
+
+        <!-- Desktop: timeline posicionada por horário -->
         <div
-          class="relative"
-          style="max-height: 460px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--zima-border-default) transparent;"
+          v-else
+          class="relative overflow-y-auto"
+          style="max-height: 460px;"
         >
           <div
             class="relative"
@@ -626,7 +749,7 @@ const dismissAlerta = (id: string) => {
               <Icon
                 :name="item.icon"
                 style="width: 13px; height: 13px;"
-                :style="{ color: item.cor }"
+                :style="{ color: item.color }"
                 aria-hidden="true"
               />
             </div>
@@ -638,14 +761,14 @@ const dismissAlerta = (id: string) => {
                 style="font-size: 13px;"
                 :style="{ color: 'var(--zima-text-primary)' }"
               >
-                {{ item.desc }}
+                {{ item.description }}
               </p>
               <p
                 class="mt-0.5"
                 style="font-size: 11px;"
                 :style="{ color: 'var(--zima-text-muted)' }"
               >
-                {{ item.tempo }}
+                {{ item.timeLabel }}
               </p>
             </div>
           </div>
@@ -653,12 +776,21 @@ const dismissAlerta = (id: string) => {
       </ZimaCard>
     </div>
 
+    <!-- Drawer de detalhes do agendamento -->
+    <DrawerDetalheAgendamento
+      v-model="drawerOpen"
+      :appointment-id="drawerDetalheId"
+    />
+
+    <!-- Modais das ações rápidas -->
+    <ModalNovoAgendamento
+      v-model="showAgendamentoModal"
+      @created="fetchAppointments()"
+    />
+    <ModalCliente
+      v-model="showClienteModal"
+    />
   </div>
-  <!-- Drawer de detalhes do agendamento -->
-  <DrawerDetalheAgendamento
-    v-model="drawerOpen"
-    :appointment-id="drawerDetalheId"
-  />
 </template>
 
 <style scoped>

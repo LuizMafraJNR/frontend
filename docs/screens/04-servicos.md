@@ -64,3 +64,9 @@ interface Service {
 ## Integração com PDV
 
 Os serviços carregados via `useServices()` são consumidos diretamente pelo `caixa.vue` (PDV) para montar o catálogo de venda.
+
+## Responsividade
+
+| Breakpoint | Comportamento |
+|-----------|--------------|
+| `< sm` (640px) | Header empilha verticalmente (título/descrição acima, botões abaixo com `shrink-0`) |

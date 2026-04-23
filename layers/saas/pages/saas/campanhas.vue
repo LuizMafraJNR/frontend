@@ -8,7 +8,7 @@ definePageMeta({ layout: 'saas' })
 const route = useRoute()
 const router = useRouter()
 const toast = useZimaToast()
-const { campaigns, addCampaign, sendCampaign, scheduleCampaign, deleteCampaign } = useCampaigns()
+const { campaigns, addCampaign, sendCampaign, scheduleCampaign, updateCampaign, deleteCampaign } = useCampaigns()
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 type TabKey = 'ativas' | 'rascunhos' | 'enviadas' | 'agendadas'
@@ -51,11 +51,11 @@ const channelMeta: Record<CampaignChannel, { icon: string; color: string; label:
 }
 
 const typeMeta: Record<CampaignType, { label: string; icon: string }> = {
-  promotional:   { label: 'Promocional', icon: '📢' },
-  reactivation:  { label: 'Reativação', icon: '🔄' },
-  birthday:      { label: 'Aniversário', icon: '🎂' },
-  launch:        { label: 'Lançamento', icon: '🚀' },
-  informational: { label: 'Informativo', icon: '📋' },
+  promotional:   { label: 'Promocional',  icon: 'i-lucide-megaphone' },
+  reactivation:  { label: 'Reativação',   icon: 'i-lucide-refresh-cw' },
+  birthday:      { label: 'Aniversário',  icon: 'i-lucide-cake' },
+  launch:        { label: 'Lançamento',   icon: 'i-lucide-rocket' },
+  informational: { label: 'Informativo',  icon: 'i-lucide-clipboard' },
 }
 
 // ── Table columns ─────────────────────────────────────────────────────────────
@@ -78,6 +78,8 @@ const formatDate = (iso: string | null) => {
 
 // ── Modal Nova Campanha ───────────────────────────────────────────────────────
 const newCampaignOpen = ref(false)
+const editingCampaignId = ref<string | null>(null)
+const isEditing = computed(() => !!editingCampaignId.value)
 const currentStep = ref('config')
 const STEPS = [
   { key: 'config', label: 'Config' },
@@ -106,11 +108,11 @@ const form = reactive({
 })
 
 const campaignTypes: { key: CampaignType; icon: string; label: string; desc: string }[] = [
-  { key: 'promotional', icon: '📢', label: 'Promocional', desc: 'Ofertas, novidades, descontos' },
-  { key: 'reactivation', icon: '🔄', label: 'Reativação', desc: 'Trazer clientes que sumiram' },
-  { key: 'birthday', icon: '🎂', label: 'Aniversariantes', desc: 'Parabéns + cupom' },
-  { key: 'launch', icon: '🚀', label: 'Lançamento', desc: 'Novo serviço ou produto' },
-  { key: 'informational', icon: '📋', label: 'Informativo', desc: 'Avisos, mudanças, feriados' },
+  { key: 'promotional',   icon: 'i-lucide-megaphone',   label: 'Promocional',     desc: 'Ofertas, novidades, descontos' },
+  { key: 'reactivation',  icon: 'i-lucide-refresh-cw',  label: 'Reativação',      desc: 'Trazer clientes que sumiram' },
+  { key: 'birthday',      icon: 'i-lucide-cake',        label: 'Aniversariantes', desc: 'Parabéns + cupom' },
+  { key: 'launch',        icon: 'i-lucide-rocket',      label: 'Lançamento',      desc: 'Novo serviço ou produto' },
+  { key: 'informational', icon: 'i-lucide-clipboard',   label: 'Informativo',     desc: 'Avisos, mudanças, feriados' },
 ]
 
 const segmentFields = [
@@ -221,23 +223,62 @@ const handleSchedule = () => {
     return
   }
   const datetime = `${form.scheduledDate}T${form.scheduledTime}:00`
-  const newCamp = addCampaign({
-    name: form.name,
-    type: form.type,
-    channel: form.channel,
-    status: 'scheduled',
-    audienceSize: audienceCount.value,
-    scheduledAt: datetime,
-    sentAt: null,
-    message: form.message,
-    couponCode: form.couponEnabled ? form.couponCode : null,
-    segmentRules: form.segmentRules,
-    allClients: form.allClients,
-  })
-  scheduleCampaign(newCamp.id, datetime)
+
+  if (editingCampaignId.value) {
+    updateCampaign(editingCampaignId.value, {
+      name: form.name,
+      type: form.type,
+      channel: form.channel,
+      audienceSize: audienceCount.value,
+      scheduledAt: datetime,
+      message: form.message,
+      couponCode: form.couponEnabled ? form.couponCode : null,
+      segmentRules: form.segmentRules,
+      allClients: form.allClients,
+    })
+    toast.success('Campanha agendada atualizada.')
+  } else {
+    const newCamp = addCampaign({
+      name: form.name,
+      type: form.type,
+      channel: form.channel,
+      status: 'scheduled',
+      audienceSize: audienceCount.value,
+      scheduledAt: datetime,
+      sentAt: null,
+      message: form.message,
+      couponCode: form.couponEnabled ? form.couponCode : null,
+      segmentRules: form.segmentRules,
+      allClients: form.allClients,
+    })
+    scheduleCampaign(newCamp.id, datetime)
+  }
+
   scheduleOpen.value = false
   newCampaignOpen.value = false
   activeTab.value = 'agendadas'
+}
+
+// Abre o modal em modo edição para uma campanha agendada
+const editScheduledCampaign = (camp: Campaign) => {
+  editingCampaignId.value = camp.id
+  const sched = camp.scheduledAt ? new Date(camp.scheduledAt) : null
+  Object.assign(form, {
+    name: camp.name,
+    type: camp.type,
+    channel: camp.channel,
+    allClients: camp.allClients,
+    segmentRules: [...(camp.segmentRules || [])],
+    message: camp.message,
+    subject: camp.subject || '',
+    imageUrl: camp.imageUrl ?? null,
+    couponEnabled: !!camp.couponCode,
+    couponCode: camp.couponCode ?? '',
+    scheduledDate: sched ? sched.toISOString().slice(0, 10) : '',
+    scheduledTime: sched ? sched.toTimeString().slice(0, 5) : '',
+  })
+  currentStep.value = 'revisao'
+  newCampaignOpen.value = true
 }
 
 const handleSaveDraft = () => {
@@ -270,6 +311,7 @@ const resetForm = () => {
   sendProgress.value = 0
   isSending.value = false
   sendComplete.value = false
+  editingCampaignId.value = null
 }
 
 watch(newCampaignOpen, v => { if (!v) resetForm() })
@@ -318,7 +360,7 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
       <template #cell-nome="{ row }">
         <div>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
-            <span style="font-size:15px;">{{ typeMeta[row.type as CampaignType].icon }}</span>
+            <Icon :name="typeMeta[row.type as CampaignType].icon" style="width:14px; height:14px; color: var(--zima-text-muted);" />
             <span style="font-size:13px;font-weight:500;color:var(--zima-text-primary);">{{ row.name }}</span>
           </div>
           <ZimaBadge variant="neutral" size="sm">{{ typeMeta[row.type as CampaignType].label }}</ZimaBadge>
@@ -363,6 +405,9 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
           <ZimaButton v-if="row.status === 'sent'" size="sm" variant="ghost" @click="navigateTo(`/saas/campanhas/${row.id}`)">
             Relatório
           </ZimaButton>
+          <ZimaButton v-if="row.status === 'scheduled' || row.status === 'draft'" size="sm" variant="ghost" @click="editScheduledCampaign(row as Campaign)">
+            <Icon name="i-lucide-pencil" style="width:13px;height:13px;" />
+          </ZimaButton>
           <ZimaButton size="sm" variant="ghost" @click="deleteCampaign(row.id)">
             <Icon name="i-lucide-trash-2" style="width:13px;height:13px;color:var(--zima-danger);" />
           </ZimaButton>
@@ -371,7 +416,7 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
     </ZimaTable>
 
     <!-- ── MODAL NOVA CAMPANHA ─────────────────────────────────────────────── -->
-    <ZimaModal v-model="newCampaignOpen" title="Nova Campanha" size="xl" :prevent-close="isSending">
+    <ZimaModal v-model="newCampaignOpen" :title="isEditing ? 'Editar Campanha' : 'Nova Campanha'" size="xl" :prevent-close="isSending">
       <div v-if="!isSending">
         <ZimaStepper :steps="STEPS" :model-value="currentStep" style="margin-bottom: 24px;" />
 
@@ -392,7 +437,9 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
                 }"
                 @click="form.type = t.key"
               >
-                <div style="font-size:22px; margin-bottom:4px;">{{ t.icon }}</div>
+                <div style="display:flex; justify-content:center; align-items:center; margin-bottom:6px; color: var(--zima-blue-core);">
+                  <Icon :name="t.icon" style="width:20px; height:20px;" />
+                </div>
                 <div style="font-size:12px; font-weight:600; color:var(--zima-text-primary);">{{ t.label }}</div>
                 <div style="font-size:11px; color:var(--zima-text-muted); margin-top:2px;">{{ t.desc }}</div>
               </div>
@@ -458,8 +505,8 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
                 <div style="font-size:13px; font-weight:500; color:var(--zima-text-secondary); margin-bottom:8px;">Mensagem</div>
                 <!-- Toolbar -->
                 <div style="display:flex; align-items:center; gap:4px; padding:6px 8px; background:var(--zima-bg-surface-2); border-radius:6px 6px 0 0; border:1px solid var(--zima-border-default); border-bottom:none;">
-                  <button style="padding:4px 8px; background:none; border:none; cursor:pointer; color:var(--zima-text-muted); font-size:13px; font-weight:700; border-radius:4px;" @click="form.message += '*texto*'" title="Negrito">B</button>
-                  <button style="padding:4px 8px; background:none; border:none; cursor:pointer; color:var(--zima-text-muted); font-size:13px; font-style:italic; border-radius:4px;" @click="form.message += '_texto_'" title="Itálico">I</button>
+                  <button style="padding:4px 8px; background:none; border:none; cursor:pointer; color:var(--zima-text-muted); font-size:13px; font-weight:700; border-radius:4px;" title="Negrito" @click="form.message += '*texto*'">B</button>
+                  <button style="padding:4px 8px; background:none; border:none; cursor:pointer; color:var(--zima-text-muted); font-size:13px; font-style:italic; border-radius:4px;" title="Itálico" @click="form.message += '_texto_'">I</button>
                   <div style="width:1px; height:16px; background:rgba(148,163,184,0.12); margin:0 4px;" />
                   <div style="position:relative;">
                     <button style="padding:4px 8px; background:none; border:none; cursor:pointer; color:var(--zima-text-muted); font-size:12px; border-radius:4px;" @click="variableMenuOpen = !variableMenuOpen">
@@ -486,8 +533,9 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
               </div>
 
               <!-- WhatsApp warning -->
-              <div v-if="form.channel === 'whatsapp'" style="padding:10px 14px; background:rgba(245,158,11,0.08); border-radius:var(--zima-radius-md); border:1px solid rgba(245,158,11,0.2);">
-                <div style="font-size:12px; color:#F59E0B;">⚠️ Mensagens para clientes que não interagiram nas últimas 24h devem usar um template aprovado pela Meta.</div>
+              <div v-if="form.channel === 'whatsapp'" style="padding:10px 14px; background:rgba(245,158,11,0.08); border-radius:var(--zima-radius-md); border:1px solid rgba(245,158,11,0.2); display:flex; align-items:flex-start; gap:8px;">
+                <Icon name="i-lucide-alert-triangle" style="width:14px; height:14px; color:#F59E0B; flex-shrink:0; margin-top:1px;" />
+                <div style="font-size:12px; color:#F59E0B;">Mensagens para clientes que não interagiram nas últimas 24h devem usar um template aprovado pela Meta.</div>
               </div>
 
               <!-- Coupon -->
@@ -516,7 +564,10 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
               </div>
               <div style="display:flex; justify-content:space-between; font-size:13px;">
                 <span style="color:var(--zima-text-muted);">Tipo:</span>
-                <span style="color:var(--zima-text-secondary);">{{ typeMeta[form.type].icon }} {{ typeMeta[form.type].label }}</span>
+                <span style="display:inline-flex; align-items:center; gap:6px; color:var(--zima-text-secondary);">
+                  <Icon :name="typeMeta[form.type].icon" style="width:14px; height:14px;" />
+                  {{ typeMeta[form.type].label }}
+                </span>
               </div>
               <div style="display:flex; justify-content:space-between; font-size:13px;">
                 <span style="color:var(--zima-text-muted);">Canal:</span>
@@ -588,7 +639,7 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
     <!-- Confirm send modal -->
     <ZimaModal v-model="confirmSendOpen" title="Confirmar envio" size="sm" danger>
       <div style="font-size:14px; color:var(--zima-text-secondary); text-align:center; padding:8px 0;">
-        Enviar para <strong style="color:var(--zima-text-primary);">{{ audienceCount }} clientes</strong> agora?<br />
+        Enviar para <strong style="color:var(--zima-text-primary);">{{ audienceCount }} clientes</strong> agora?<br >
         <span style="font-size:12px; color:var(--zima-text-muted); margin-top:4px; display:block;">Esta ação não pode ser desfeita.</span>
       </div>
       <template #footer="{ close }">

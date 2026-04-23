@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<{
           <div>
             <div style="font-size:13px;font-weight:600;color:#F1F5F9;">{{ props.agentName }}</div>
             <div style="font-size:11px;color:#10B981;display:flex;align-items:center;gap:4px;">
-              <div style="width:6px;height:6px;border-radius:50%;background:#10B981;"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:#10B981;"/>
               Online
             </div>
           </div>

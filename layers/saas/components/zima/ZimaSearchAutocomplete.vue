@@ -133,7 +133,7 @@ const showDropdown = computed(() =>
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
         @focus="isFocused = true"
         @blur="isFocused = false"
-      />
+      >
 
       <!-- Loading spinner -->
       <span

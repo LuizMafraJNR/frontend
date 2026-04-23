@@ -2,7 +2,7 @@
 import type { Professional } from '../../composables/useProfessionals'
 import type { Service } from '../../composables/useServices'
 
-const props = defineProps<{
+defineProps<{
   modelValue: boolean
   services: Service[]
 }>()
@@ -79,7 +79,7 @@ const save = async () => {
   >
     <div class="flex flex-col gap-4">
       <!-- Nome + Cargo -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <ZimaInput
           v-model="form.name"
           label="Nome completo"
@@ -97,7 +97,7 @@ const save = async () => {
       </div>
 
       <!-- E-mail + Telefone -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <ZimaInput
           v-model="form.email"
           label="E-mail"
@@ -114,7 +114,7 @@ const save = async () => {
       </div>
 
       <!-- Comissão + Status -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <ZimaInput
           v-model.number="form.commissionRate"
           label="Comissão (%)"
@@ -147,7 +147,7 @@ const save = async () => {
               :checked="form.services.includes(svc.id)"
               class="rounded accent-blue-500"
               @change="toggleService(svc.id)"
-            />
+            >
             <span class="flex-1 text-sm" :style="{ color: 'var(--zima-text-primary)' }">
               {{ svc.name }}
             </span>

@@ -76,6 +76,8 @@ const handleOutsideClick = (e: MouseEvent) => {
 
 onMounted(() => document.addEventListener('click', handleOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
+
+const { toggleSidebarMobile } = useSaasLayout()
 </script>
 
 <template>
@@ -91,6 +93,16 @@ onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
     }"
     data-testid="zima-topbar"
   >
+    <!-- Mobile hamburger (visible <lg) -->
+    <button
+      class="lg:hidden flex items-center justify-center rounded-md"
+      style="width:32px; height:32px; background:var(--zima-bg-surface-2); border:1px solid var(--zima-border-default); color:var(--zima-text-secondary); flex-shrink:0;"
+      aria-label="Abrir menu"
+      @click="toggleSidebarMobile"
+    >
+      <Icon name="i-lucide-menu" style="width:16px; height:16px;" />
+    </button>
+
     <!-- Left: Breadcrumbs -->
     <nav
       v-if="breadcrumbs.length"
@@ -128,9 +140,9 @@ onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
     </nav>
     <div v-else class="flex-1" />
 
-    <!-- Center: Global Search (Command Palette trigger) -->
+    <!-- Center: Global Search (Command Palette trigger) — oculto em telas estreitas -->
     <button
-      class="flex items-center gap-2 rounded-md px-3 transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
+      class="hidden md:flex items-center gap-2 rounded-md px-3 transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
       :style="{
         height: '32px',
         background: 'var(--zima-bg-surface-2)',
@@ -218,7 +230,8 @@ onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
             v-if="notificationsOpen"
             class="absolute right-0 top-full mt-2 rounded-lg overflow-hidden"
             :style="{
-              width: '380px',
+              width: 'min(380px, calc(100vw - 32px))',
+              maxWidth: 'calc(100vw - 32px)',
               background: 'var(--zima-bg-surface-3)',
               border: '1px solid var(--zima-border-modal)',
               boxShadow: 'var(--zima-shadow-dropdown)',
@@ -394,7 +407,8 @@ onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
             v-if="userMenuOpen"
             class="absolute right-0 top-full mt-2 rounded-lg overflow-hidden"
             :style="{
-              width: '200px',
+              width: 'min(200px, calc(100vw - 32px))',
+              maxWidth: 'calc(100vw - 32px)',
               background: 'var(--zima-bg-surface-3)',
               border: '1px solid var(--zima-border-modal)',
               boxShadow: 'var(--zima-shadow-dropdown)',

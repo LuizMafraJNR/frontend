@@ -184,7 +184,7 @@ const getCellValue = (row: Record<string, unknown>, key: string): unknown => {
                 }"
                 :aria-label="allSelected ? 'Desselecionar todos' : 'Selecionar todos'"
                 @change="toggleSelectAll"
-              />
+              >
             </th>
 
             <th
@@ -381,7 +381,7 @@ const getCellValue = (row: Record<string, unknown>, key: string): unknown => {
                   }"
                   :aria-label="`Selecionar linha ${idx + 1}`"
                   @change="toggleRow(idx)"
-                />
+                >
               </td>
 
               <!-- Data cells -->

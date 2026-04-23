@@ -171,11 +171,12 @@ Referências visuais: Linear App, Vercel Dashboard, Stripe Dashboard.
 
 | CSS Variable | Valor | Uso |
 |---|---|---|
-| `--zima-sidebar-width` | `240px` | Sidebar expandida |
-| `--zima-sidebar-width-collapsed` | `64px` | Sidebar colapsada |
+| `--zima-sidebar-width` | `240px` | Sidebar expandida (desktop) |
+| `--zima-sidebar-width-collapsed` | `64px` | Sidebar colapsada (desktop) |
+| `--zima-sidebar-drawer-width` | `280px` | Largura do drawer mobile (`<1024px`) |
 | `--zima-topbar-height` | `56px` | Top bar fixa |
 | `--zima-content-max-width` | `1280px` | Max-width do conteúdo |
-| `--zima-content-padding` | `24px` | Padding lateral |
+| `--zima-content-padding` | `24px` | Padding lateral (desktop) — `16px` `<1024px`, `12px` `<640px` |
 
 ### Tipografia Zima
 

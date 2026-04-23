@@ -14,7 +14,12 @@ import type { Notification } from '../components/zima/ZimaTopBar.vue'
  * - Slot de conteúdo com offset automático
  */
 
-const { sidebarCollapsed, setupCommandPaletteShortcut } = useSaasLayout()
+const {
+  sidebarCollapsed,
+  sidebarMobileOpen,
+  closeSidebarMobile,
+  setupCommandPaletteShortcut,
+} = useSaasLayout()
 const toast = useZimaToast()
 
 setupCommandPaletteShortcut()
@@ -148,14 +153,32 @@ const handleNotificationClick = (notif: Notification) => {
 
 <template>
   <div
-    class="min-h-screen"
-    :style="{ background: 'var(--zima-bg-base)' }"
+    class="saas-layout min-h-screen"
+    :style="{ background: 'var(--zima-bg-base)', overflowX: 'hidden' }"
   >
-    <!-- Sidebar -->
+    <!-- Overlay mobile — gate por CSS media query (só aparece <1024px) -->
+    <Transition name="zima-fade">
+      <div
+        v-if="sidebarMobileOpen"
+        class="saas-layout__mobile-overlay"
+        :style="{
+          position: 'fixed',
+          inset: '0',
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 'calc(var(--zima-z-overlay) - 1)',
+        }"
+        aria-hidden="true"
+        @click="closeSidebarMobile"
+      />
+    </Transition>
+
+    <!-- Sidebar — drawer mobile gerenciado internamente -->
     <ZimaSidebar
       :groups="navGroups"
       :active-key="activeKey"
-      @navigate="(item) => item.to && navigateTo(item.to)"
+      :mobile-open="sidebarMobileOpen"
+      @navigate="(item) => { if (item.to) { navigateTo(item.to); closeSidebarMobile() } }"
+      @close="closeSidebarMobile"
     />
 
     <!-- Top Bar -->
@@ -171,13 +194,12 @@ const handleNotificationClick = (notif: Notification) => {
       @logout="toast.info('Saindo...')"
     />
 
-    <!-- Main content area -->
+    <!-- Main content area — padding-left via CSS media query -->
     <main
+      class="saas-layout__main"
+      :class="{ 'saas-layout__main--sidebar-collapsed': sidebarCollapsed }"
       :style="{
         paddingTop: 'var(--zima-topbar-height)',
-        paddingLeft: sidebarCollapsed
-          ? 'var(--zima-sidebar-width-collapsed)'
-          : 'var(--zima-sidebar-width)',
         transition: 'padding-left 200ms ease',
         minHeight: '100vh',
       }"
@@ -203,3 +225,34 @@ const handleNotificationClick = (notif: Notification) => {
     />
   </div>
 </template>
+
+<style scoped>
+.zima-fade-enter-active,
+.zima-fade-leave-active {
+  transition: opacity 200ms ease;
+}
+.zima-fade-enter-from,
+.zima-fade-leave-to {
+  opacity: 0;
+}
+
+/* Gate mobile/desktop via media query — sem dependência de JS */
+@media (min-width: 1024px) {
+  .saas-layout__main {
+    padding-left: var(--zima-sidebar-width);
+  }
+  .saas-layout__main.saas-layout__main--sidebar-collapsed {
+    padding-left: var(--zima-sidebar-width-collapsed);
+  }
+  /* Overlay mobile nunca aparece em desktop, mesmo se o state vazar */
+  .saas-layout__mobile-overlay {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .saas-layout__main {
+    padding-left: 0 !important;
+  }
+}
+</style>

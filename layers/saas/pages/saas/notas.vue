@@ -220,7 +220,7 @@ const liquidoNfse = computed(() => {
   return nfseForm.value.serviceValue - issValue.value
 })
 
-const customerOptions = computed(() => [
+const _customerOptions = computed(() => [
   { label: 'Selecionar cliente...', value: '' },
   ...customers.value.map(c => ({ label: c.name + ' — ' + (c.cpf || c.phone), value: c.id })),
 ])
@@ -335,7 +335,7 @@ const defaultNfeForm = (): NfeFormLocal => ({
 
 const nfeForm = ref<NfeFormLocal>(defaultNfeForm())
 
-const nfeProductOptions = computed(() => [
+const _nfeProductOptions = computed(() => [
   { label: 'Selecionar produto...', value: '' },
   ...products.value.filter(p => p.active).map(p => ({ label: p.name + ' (Estoque: ' + p.stock + ')', value: p.id })),
 ])
@@ -579,7 +579,7 @@ const sectionCard = {
               fontSize: '14px',
               outline: 'none',
             }"
-          />
+          >
         </div>
         <ZimaSelect v-if="activeTab === 'todas'" v-model="typeFilter" :options="typeOptions" style="min-width:150px" />
         <ZimaSelect v-model="statusFilter" :options="statusOptions" style="min-width:150px" />
@@ -587,13 +587,13 @@ const sectionCard = {
           v-model="dateFrom"
           type="date"
           :style="{ height: '36px', padding: '0 10px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '13px' }"
-        />
+        >
         <span :style="{ color: 'var(--zima-text-muted)', fontSize: '13px' }">até</span>
         <input
           v-model="dateTo"
           type="date"
           :style="{ height: '36px', padding: '0 10px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '13px' }"
-        />
+        >
         <ZimaButton variant="ghost" size="sm" @click="toast.info('Exportando notas fiscais...')">
           <Icon name="i-lucide-download" style="width:14px;height:14px;margin-right:6px;" />
           Exportar
@@ -629,7 +629,8 @@ const sectionCard = {
 
         <!-- Tipo -->
         <template #cell-tipo="{ row }">
-          <span :style="{
+          <span
+:style="{
             display: 'inline-flex',
             alignItems: 'center',
             padding: '2px 8px',
@@ -785,7 +786,7 @@ const sectionCard = {
               placeholder="XX.XXX.XXX/XXXX-XX"
               :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px', fontFamily: 'monospace' }"
               @input="maskCnpj"
-            />
+            >
           </div>
           <ZimaInput v-model="configForm.razaoSocial" label="Razão Social *" placeholder="Studio Beleza LTDA ME" />
           <ZimaInput v-model="configForm.nomeFantasia" label="Nome Fantasia" placeholder="Studio Beleza" />
@@ -821,11 +822,11 @@ const sectionCard = {
           <ZimaSelect v-model="configForm.snAnexo" label="Anexo do Simples" :options="snAnexoOptions" />
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Alíquota Efetiva (%)</label>
-            <input v-model.number="configForm.snAliquotaEfetiva" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+            <input v-model.number="configForm.snAliquotaEfetiva" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
           </div>
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">RBT12 (Receita Bruta 12 meses)</label>
-            <input v-model.number="configForm.snRbt12" type="number" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+            <input v-model.number="configForm.snRbt12" type="number" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
           </div>
         </div>
 
@@ -833,11 +834,11 @@ const sectionCard = {
         <div v-else-if="configForm.regimeTributario === 'LP'" class="grid grid-cols-2 gap-4">
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">PIS (%)</label>
-            <input v-model.number="configForm.lpPisAliquota" type="number" step="0.01" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+            <input v-model.number="configForm.lpPisAliquota" type="number" step="0.01" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
           </div>
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">COFINS (%)</label>
-            <input v-model.number="configForm.lpCofinsAliquota" type="number" step="0.01" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+            <input v-model.number="configForm.lpCofinsAliquota" type="number" step="0.01" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
           </div>
           <div class="col-span-2" :style="{ padding: '12px', background: 'rgba(148,163,184,0.06)', borderRadius: 'var(--zima-radius-md)' }">
             <p :style="{ fontSize: '13px', color: 'var(--zima-text-muted)' }">IRPJ e CSLL são calculados trimestralmente sobre o lucro presumido e devem ser recolhidos separadamente. Consulte seu contador para as alíquotas corretas.</p>
@@ -901,7 +902,7 @@ const sectionCard = {
               type="password"
               placeholder="••••••••"
               :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }"
-            />
+            >
           </div>
           <ZimaButton variant="ghost" :loading="validatingCert" @click="validateCert">
             <Icon name="i-lucide-shield-check" style="width:14px;height:14px;margin-right:6px;" />
@@ -944,7 +945,7 @@ const sectionCard = {
               type="password"
               placeholder="••••••••"
               :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }"
-            />
+            >
           </div>
           <div class="col-span-2">
             <ZimaButton variant="ghost" size="sm" :loading="testingConnection" @click="testConnection">
@@ -955,7 +956,7 @@ const sectionCard = {
           <ZimaInput v-model="configForm.nfseSerie" label="Série da NFS-e" placeholder="1" />
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Próximo número</label>
-            <input v-model.number="configForm.nfseProximoNumero" type="number" min="1" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px', fontFamily: 'monospace' }" />
+            <input v-model.number="configForm.nfseProximoNumero" type="number" min="1" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px', fontFamily: 'monospace' }" >
           </div>
         </div>
       </div>
@@ -974,11 +975,11 @@ const sectionCard = {
             class="flex items-center gap-2 cursor-pointer"
           >
             <input
+              v-model="configForm.nfeAmbiente"
               type="radio"
               :value="opt.value"
-              v-model="configForm.nfeAmbiente"
               :style="{ accentColor: 'var(--zima-primary)' }"
-            />
+            >
             <span :style="{ fontSize: '14px', color: 'var(--zima-text-primary)' }">{{ opt.label }}</span>
           </label>
         </div>
@@ -996,7 +997,7 @@ const sectionCard = {
           <ZimaInput v-model="configForm.nfeSerie" label="Série da NF-e" placeholder="1" />
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Próximo número</label>
-            <input v-model.number="configForm.nfeProximoNumero" type="number" min="1" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px', fontFamily: 'monospace' }" />
+            <input v-model.number="configForm.nfeProximoNumero" type="number" min="1" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px', fontFamily: 'monospace' }" >
           </div>
           <ZimaInput v-model="configForm.nfeCsc" label="CSC — Código de Segurança do Contribuinte" placeholder="Obtido no portal SEFAZ" />
           <ZimaInput v-model="configForm.nfeCscId" label="ID do CSC" placeholder="000001" />
@@ -1011,7 +1012,7 @@ const sectionCard = {
         <div class="grid grid-cols-2 gap-4 mb-5">
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Alíquota ISS padrão (%)</label>
-            <input v-model.number="configForm.issAliquotaPadrao" type="number" step="0.01" min="0" max="100" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+            <input v-model.number="configForm.issAliquotaPadrao" type="number" step="0.01" min="0" max="100" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
           </div>
           <ZimaSelect v-model="configForm.servicoCodigoPadrao" label="Código de serviço padrão" :options="SERVICE_CODES" />
           <ZimaSelect v-model="configForm.cfopPadrao" label="CFOP padrão para vendas" :options="CFOP_OPTIONS" />
@@ -1100,7 +1101,7 @@ const sectionCard = {
               </div>
             </div>
 
-            <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '0 0 16px' }" />
+            <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '0 0 16px' }" >
 
             <!-- Seção 2: Serviço -->
             <p :style="{ fontSize: '12px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Descrição do Serviço</p>
@@ -1133,12 +1134,12 @@ const sectionCard = {
                   min="0"
                   placeholder="0,00"
                   :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px', fontFamily: 'monospace' }"
-                />
+                >
               </div>
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Alíquota ISS (%)</label>
-                  <input v-model.number="nfseForm.issAliquota" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+                  <input v-model.number="nfseForm.issAliquota" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
                 </div>
                 <div>
                   <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Valor ISS</label>
@@ -1148,7 +1149,7 @@ const sectionCard = {
                 </div>
                 <div>
                   <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Dedução (R$)</label>
-                  <input v-model.number="nfseForm.deduction" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+                  <input v-model.number="nfseForm.deduction" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
                 </div>
               </div>
               <div class="flex items-center justify-between" :style="{ padding: '8px 12px', background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-md)', fontSize: '13px' }">
@@ -1157,7 +1158,7 @@ const sectionCard = {
               </div>
             </div>
 
-            <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '0 0 16px' }" />
+            <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '0 0 16px' }" >
 
             <!-- Seção 3: Impostos -->
             <button
@@ -1316,7 +1317,7 @@ const sectionCard = {
               </div>
             </div>
 
-            <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '0 0 16px' }" />
+            <hr :style="{ border: 'none', borderTop: '1px solid var(--zima-border-default)', margin: '0 0 16px' }" >
 
             <!-- Produtos -->
             <p :style="{ fontSize: '12px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Produtos</p>
@@ -1352,7 +1353,7 @@ const sectionCard = {
                       </select>
                     </td>
                     <td :style="{ padding: '6px 10px' }">
-                      <input v-model="item.ncm" placeholder="NCM" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-muted)', fontSize: '12px', fontFamily: 'monospace', outline: 'none' }" />
+                      <input v-model="item.ncm" placeholder="NCM" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-muted)', fontSize: '12px', fontFamily: 'monospace', outline: 'none' }" >
                     </td>
                     <td :style="{ padding: '6px 10px' }">
                       <select
@@ -1363,16 +1364,16 @@ const sectionCard = {
                       </select>
                     </td>
                     <td :style="{ padding: '6px 10px' }">
-                      <input v-model.number="item.qty" type="number" min="1" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }" />
+                      <input v-model.number="item.qty" type="number" min="1" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }" >
                     </td>
                     <td :style="{ padding: '6px 10px' }">
-                      <input v-model.number="item.unitValue" type="number" step="0.01" min="0" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }" />
+                      <input v-model.number="item.unitValue" type="number" step="0.01" min="0" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-primary)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }" >
                     </td>
                     <td :style="{ padding: '6px 10px', textAlign: 'right', fontSize: '12px', fontFamily: 'monospace', color: 'var(--zima-text-primary)', fontWeight: '500' }">
                       {{ fmt((item.qty || 0) * (item.unitValue || 0)) }}
                     </td>
                     <td :style="{ padding: '6px 10px' }">
-                      <input v-model.number="item.icmsAliquota" type="number" step="0.1" min="0" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-muted)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }" />
+                      <input v-model.number="item.icmsAliquota" type="number" step="0.1" min="0" :style="{ width: '100%', background: 'transparent', border: 'none', color: 'var(--zima-text-muted)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', outline: 'none' }" >
                     </td>
                     <td :style="{ padding: '6px 10px', textAlign: 'right', fontSize: '12px', fontFamily: 'monospace', color: 'var(--zima-text-muted)' }">
                       {{ fmt((item.qty || 0) * (item.unitValue || 0) * item.icmsAliquota / 100) }}
@@ -1413,7 +1414,7 @@ const sectionCard = {
               <ZimaSelect v-model="nfeForm.frete" label="Frete" :options="freteOptions" />
               <div v-if="nfeForm.frete !== 'sem-frete'" class="col-span-2">
                 <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Valor do frete (R$)</label>
-                <input v-model.number="nfeForm.freteValue" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" />
+                <input v-model.number="nfeForm.freteValue" type="number" step="0.01" min="0" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
               </div>
               <div class="col-span-2">
                 <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Informações adicionais</label>

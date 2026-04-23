@@ -168,7 +168,7 @@ const dDateTime = (offset: number, time = '10:00'): string => {
   return d.toISOString().slice(0, 10) + ' ' + time
 }
 
-const dDate = (offset: number): string => {
+const _dDate = (offset: number): string => {
   const d = new Date()
   d.setDate(d.getDate() + offset)
   return d.toISOString().slice(0, 10)

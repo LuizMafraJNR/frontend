@@ -170,6 +170,13 @@ const addTag = () => {
   form.tagInput = ''
 }
 
+const onTagKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault()
+    addTag()
+  }
+}
+
 const removeTag = (tag: string) => {
   form.tags = form.tags.filter(t => t !== tag)
 }
@@ -250,7 +257,7 @@ const handleSave = async () => {
           @blur="validateName"
         />
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ZimaInput
             v-model="form.phone"
             label="Telefone"
@@ -269,7 +276,7 @@ const handleSave = async () => {
           />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ZimaInput
             v-model="form.cpf"
             label="CPF"
@@ -282,7 +289,7 @@ const handleSave = async () => {
           />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ZimaSelect
             :model-value="form.gender"
             label="Gênero"
@@ -301,7 +308,7 @@ const handleSave = async () => {
           />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ZimaSelect
             :model-value="form.status"
             label="Status"
@@ -330,8 +337,7 @@ const handleSave = async () => {
                 placeholder="Adicionar tag..."
                 class="flex-1 min-w-[80px] bg-transparent border-none outline-none"
                 style="font-size: 13px; color: var(--zima-text-primary);"
-                @keydown.enter.prevent="addTag"
-                @keydown.comma.prevent="addTag"
+                @keydown="onTagKeydown"
               >
             </div>
             <p style="font-size: 11px; color: var(--zima-text-muted);">Pressione Enter para adicionar</p>
@@ -363,7 +369,7 @@ const handleSave = async () => {
         </button>
 
         <div v-if="addressOpen" class="flex flex-col gap-3 px-4 pb-4">
-          <div class="grid grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="col-span-3">
               <ZimaInput
                 v-model="form.zip"
@@ -383,7 +389,7 @@ const handleSave = async () => {
             </div>
           </div>
 
-          <div class="grid grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="col-span-3">
               <ZimaInput v-model="form.street" label="Rua / Logradouro" placeholder="Nome da rua" />
             </div>
@@ -392,12 +398,12 @@ const handleSave = async () => {
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <ZimaInput v-model="form.complement" label="Complemento" placeholder="Apto, sala..." />
             <ZimaInput v-model="form.neighborhood" label="Bairro" placeholder="Nome do bairro" />
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <ZimaInput v-model="form.city" label="Cidade" placeholder="Nome da cidade" />
             <ZimaSelect
               :model-value="form.state"

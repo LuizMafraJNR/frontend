@@ -93,7 +93,7 @@ const agentConfig = ref<AIAgentConfig>({
   emojiFrequency: 'moderate',
   language: 'pt-BR',
   autoDetectLanguage: false,
-  welcomeMessage: 'Olá {{nome_cliente}}! 😊 Seja bem-vinda ao {{nome_negocio}}. Como posso te ajudar hoje?',
+  welcomeMessage: 'Olá {{nome_cliente}}! Seja bem-vinda ao {{nome_negocio}}. Como posso te ajudar hoje?',
   offHoursMessage: 'No momento estamos fechados. Nosso horário é seg-sex 08:00-18:00. Deixe sua mensagem que responderemos no próximo dia útil!',
   maxMessagesBeforeTransfer: 10,
   alwaysTransferTopics: ['reclamação', 'reembolso', 'problema', 'jurídico'],

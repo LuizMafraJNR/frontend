@@ -236,12 +236,15 @@ const MOCK_CUSTOMERS: Customer[] = [
 
 const customers = ref<Customer[]>([])
 const loading = ref(false)
+const initialized = ref(false)
 
 export const useCustomers = () => {
   const fetchAll = async () => {
+    if (initialized.value) return
     loading.value = true
     await new Promise(resolve => setTimeout(resolve, 400))
     customers.value = [...MOCK_CUSTOMERS]
+    initialized.value = true
     loading.value = false
   }
 
@@ -260,7 +263,7 @@ export const useCustomers = () => {
       since: data.since ?? new Date().toISOString().slice(0, 10),
       loyaltyPoints: data.loyaltyPoints ?? 0,
     }
-    customers.value.push(newCustomer)
+    customers.value.unshift(newCustomer)
     return newCustomer
   }
 

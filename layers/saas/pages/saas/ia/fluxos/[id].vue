@@ -240,7 +240,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKeyDown) })
         <input
           v-model="flowName"
           style="background:none; border:none; outline:none; color:var(--zima-text-primary); font-size:14px; font-weight:600; min-width:160px;"
-        />
+        >
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <div style="display:flex; align-items:center; gap:4px; background:rgba(148,163,184,0.06); border-radius:6px; padding:3px;">
@@ -400,7 +400,8 @@ onUnmounted(() => { window.removeEventListener('keydown', onKeyDown) })
             </div>
             <template v-for="(msg, i) in testMessages" :key="i">
               <div style="display:flex;" :style="{ justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }">
-                <div style="max-width:75%; padding:8px 12px; font-size:13px; line-height:1.4;" :style="{
+                <div
+style="max-width:75%; padding:8px 12px; font-size:13px; line-height:1.4;" :style="{
                   background: msg.sender === 'user' ? 'rgba(59,130,246,0.12)' : '#161B28',
                   borderRadius: msg.sender === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
                   color: 'var(--zima-text-secondary)',
@@ -416,7 +417,7 @@ onUnmounted(() => { window.removeEventListener('keydown', onKeyDown) })
               placeholder="Digite como se fosse o cliente..."
               style="flex:1;padding:8px 12px;background:#111520;border:1px solid rgba(148,163,184,0.12);border-radius:6px;color:var(--zima-text-primary);font-size:13px;outline:none;"
               @keydown.enter="runTest"
-            />
+            >
             <ZimaButton size="sm" @click="runTest">Enviar</ZimaButton>
             <ZimaButton size="sm" variant="ghost" @click="resetTest">Reset</ZimaButton>
           </div>
