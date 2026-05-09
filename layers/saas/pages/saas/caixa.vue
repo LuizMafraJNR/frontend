@@ -25,6 +25,11 @@ onMounted(async () => {
   }
 })
 
+// ── Responsividade ───────────────────────────────────────────────────────────
+const { width: _caixaWidth } = useWindowSize()
+const isMobile = computed(() => _caixaWidth.value < 768)
+const pdvView = ref<'products' | 'cart'>('products')
+
 // ── View mode (pdv vs historico) ──────────────────────────────────────────────
 const activeView = ref<'pdv' | 'historico'>((route.query.view as 'pdv' | 'historico') || 'pdv')
 watch(activeView, v => router.replace({ query: v === 'historico' ? { view: v } : {} }))
@@ -492,7 +497,7 @@ const formatDuration = (minutes: number) => {
       </div>
 
       <!-- KPI row -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">VENDAS HOJE</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #10B981;">{{ formatCurrency(saleHistory.reduce((s, x) => s + x.total, 0)) }}</div>
@@ -604,10 +609,15 @@ v-for="(item, i) in histViewSale.items" :key="i"
     </template>
 
     <!-- 2-panel layout -->
-    <div v-if="activeView === 'pdv'" class="grid grid-cols-12 gap-0 rounded-xl overflow-hidden" style="min-height: calc(100vh - 180px); border: 1px solid var(--zima-border-default);">
+    <div v-if="activeView === 'pdv'" class="md:grid md:grid-cols-12 flex flex-col gap-0 rounded-xl overflow-hidden" style="min-height: calc(100vh - 180px); border: 1px solid var(--zima-border-default);">
 
-      <!-- ── LEFT PANEL (7/12) ────────────────────────────────────────────── -->
-      <div class="col-span-7 flex flex-col" style="background: var(--zima-bg-surface-1); border-right: 1px solid var(--zima-border-default);">
+      <!-- ── LEFT PANEL (7/12 desktop | full mobile) ───────────────────────── -->
+      <div
+        v-show="!isMobile || pdvView === 'products'"
+        class="md:col-span-7 flex flex-col"
+        :class="isMobile ? 'flex-1' : ''"
+        style="background: var(--zima-bg-surface-1); border-right: 1px solid var(--zima-border-default);"
+      >
 
         <!-- Tabs -->
         <div class="flex items-center gap-1 p-3 pb-0" style="border-bottom: 1px solid var(--zima-border-divider);">
@@ -732,8 +742,13 @@ v-for="(item, i) in histViewSale.items" :key="i"
         </div>
       </div>
 
-      <!-- ── RIGHT PANEL (5/12) ───────────────────────────────────────────── -->
-      <div class="col-span-5 flex flex-col" style="background: #111520;">
+      <!-- ── RIGHT PANEL (5/12 desktop | full mobile) ────────────────────── -->
+      <div
+        v-show="!isMobile || pdvView === 'cart'"
+        class="md:col-span-5 flex flex-col"
+        :class="isMobile ? 'flex-1' : ''"
+        style="background: #111520;"
+      >
 
         <!-- Customer + Professional -->
         <div class="p-4 flex flex-col gap-3" style="border-bottom: 1px solid rgba(148,163,184,0.08);">
@@ -1106,6 +1121,42 @@ v-for="(item, i) in histViewSale.items" :key="i"
             Finalizar Venda — {{ formatCurrency(total) }}
           </ZimaButton>
         </div>
+      </div>
+
+      <!-- Bottom tabs — somente mobile -->
+      <div
+        v-if="isMobile"
+        style="
+          position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+          display: flex; background: #111520;
+          border-top: 1px solid rgba(148,163,184,0.12);
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        "
+      >
+        <button
+          style="flex: 1; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: none; cursor: pointer; transition: background 150ms;"
+          :style="{ background: pdvView === 'products' ? 'rgba(59,130,246,0.1)' : 'transparent', color: pdvView === 'products' ? '#60A5FA' : '#64748B' }"
+          @click="pdvView = 'products'"
+        >
+          <Icon name="i-lucide-scissors" style="width: 20px; height: 20px;" />
+          <span style="font-size: 11px; font-weight: 500;">Serviços</span>
+        </button>
+        <button
+          style="flex: 1; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: none; cursor: pointer; position: relative; transition: background 150ms;"
+          :style="{ background: pdvView === 'cart' ? 'rgba(59,130,246,0.1)' : 'transparent', color: pdvView === 'cart' ? '#60A5FA' : '#64748B' }"
+          @click="pdvView = 'cart'"
+        >
+          <Icon name="i-lucide-shopping-cart" style="width: 20px; height: 20px;" />
+          <span style="font-size: 11px; font-weight: 500;">Carrinho</span>
+          <span
+            v-if="cart.length > 0"
+            style="
+              position: absolute; top: 6px; right: calc(50% - 22px);
+              background: #3B82F6; color: #fff; border-radius: 9999px;
+              font-size: 10px; font-weight: 700; padding: 1px 5px; min-width: 16px; text-align: center;
+            "
+          >{{ cart.length }}</span>
+        </button>
       </div>
     </div>
 

@@ -357,7 +357,7 @@ const formatPrice = (price: number) =>
                 draggable="true"
                 class="flex items-center gap-3 px-4"
                 :style="{
-                  height: '52px',
+                  minHeight: '52px',
                   borderBottom: idx < group.services.length - 1 ? '1px solid var(--zima-border-divider)' : 'none',
                   background: dragOverSvcId === svc.id && dragCatId === group.category.id
                     ? 'var(--zima-blue-subtle)'
@@ -408,7 +408,6 @@ const formatPrice = (price: number) =>
                     font-family: 'Geist Mono', monospace;
                     font-size: 13px;
                     color: var(--zima-text-primary);
-                    min-width: 76px;
                     text-align: right;
                   "
                 >

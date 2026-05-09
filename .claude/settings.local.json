@@ -4,7 +4,9 @@
       "Bash(npm run *)",
       "Bash(npx vue-tsc *)",
       "Bash(awk '/^C:\\\\\\\\/ { file=$0 } /error/ { print file \" :: \" $0 }')",
-      "Bash(awk 'BEGIN{f=\"\"} /^C:/ {f=$0; next} /error/ {print f \":\" $0}')"
+      "Bash(awk 'BEGIN{f=\"\"} /^C:/ {f=$0; next} /error/ {print f \":\" $0}')",
+      "Bash(\\\\.ts)",
+      "Bash(\\\\.js\")"
     ]
   }
 }

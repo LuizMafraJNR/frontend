@@ -531,7 +531,7 @@ const payMethodSelectOptions = [
     <template v-if="activeTab === 'overview'">
 
       <!-- KPI Cards 5 columns -->
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <!-- Receita -->
         <div
           style="padding: 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
@@ -622,7 +622,7 @@ style="height: 100%; background: #10B981; border-radius: 99px; transition: width
       </div>
 
       <!-- Charts row -->
-      <div style="display: grid; grid-template-columns: 8fr 4fr; gap: 16px;">
+      <div class="grid grid-cols-1 lg:grid-cols-[8fr_4fr] gap-4">
 
         <!-- Bar chart -->
         <div style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
@@ -738,7 +738,7 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="activeTab === 'receitas'">
       <!-- KPI summary row -->
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL RECEBIDO</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #10B981;">{{ formatCurrency(kpiIncome) }}</div>
@@ -761,10 +761,10 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; 
           <ZimaInput v-model="recSearch" type="search" placeholder="Buscar receita ou cliente..." />
         </div>
         <ZimaSelect
-:model-value="recCatFilter ?? '__all__'" :options="catIncomeOptions" style="min-width: 160px;"
+:model-value="recCatFilter ?? '__all__'" :options="catIncomeOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="recCatFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaSelect
-:model-value="recPayFilter ?? '__all__'" :options="payMethodOptions" style="min-width: 160px;"
+:model-value="recPayFilter ?? '__all__'" :options="payMethodOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="recPayFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaButton size="sm" variant="ghost" @click="openNewIncome">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 13px; height: 13px;" /></template>
@@ -827,7 +827,7 @@ style="font-size: 12px; color: var(--zima-blue-core); background: none; border: 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="activeTab === 'despesas'">
       <!-- KPI summary row -->
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL PAGO</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #EF4444;">{{ formatCurrency(kpiExpenses) }}</div>
@@ -871,10 +871,10 @@ style="height: 100%; border-radius: 99px; background: #EF4444; opacity: 0.75; tr
           <ZimaInput v-model="despSearch" type="search" placeholder="Buscar despesa..." />
         </div>
         <ZimaSelect
-:model-value="despCatFilter ?? '__all__'" :options="catExpenseOptions" style="min-width: 160px;"
+:model-value="despCatFilter ?? '__all__'" :options="catExpenseOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="despCatFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaSelect
-:model-value="despPayFilter ?? '__all__'" :options="payMethodOptions" style="min-width: 160px;"
+:model-value="despPayFilter ?? '__all__'" :options="payMethodOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="despPayFilter = $event === '__all__' ? null : ($event as string)" />
         <ZimaButton size="sm" variant="ghost" @click="openNewExpense">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 13px; height: 13px;" /></template>
@@ -934,7 +934,7 @@ style="font-size: 12px; color: var(--zima-blue-core); background: none; border: 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="activeTab === 'receber'">
       <!-- Summary -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PENDENTE</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiReceivable) }}</div>
@@ -964,7 +964,7 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
       <!-- Filters -->
       <div style="display: flex; align-items: center; gap: 10px;">
         <ZimaSelect
-:model-value="recStatusFilter ?? '__all__'" :options="recStatusOptions" style="min-width: 160px;"
+:model-value="recStatusFilter ?? '__all__'" :options="recStatusOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="recStatusFilter = $event === '__all__' ? null : ($event as string)" />
         <div style="flex: 1;" />
         <ZimaButton size="sm" @click="toast.info('Abrir modal de novo lançamento a receber')">
@@ -1039,7 +1039,7 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="activeTab === 'pagar'">
       <!-- Summary -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PENDENTE</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiPayable) }}</div>
@@ -1070,7 +1070,7 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
       <!-- Filters -->
       <div style="display: flex; align-items: center; gap: 10px;">
         <ZimaSelect
-:model-value="payStatusFilter ?? '__all__'" :options="payStatusOptions" style="min-width: 160px;"
+:model-value="payStatusFilter ?? '__all__'" :options="payStatusOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="payStatusFilter = $event === '__all__' ? null : ($event as string)" />
         <div style="flex: 1;" />
         <ZimaButton size="sm" @click="toast.info('Abrir modal de nova conta a pagar')">
@@ -1150,7 +1150,7 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="activeTab === 'comissoes'">
       <!-- Totals summary -->
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL A PAGAR</div>
           <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">
@@ -1170,17 +1170,17 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
       </div>
 
       <!-- Filters -->
-      <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <ZimaSelect
           :model-value="commissionProFilter ?? '__all__'"
           :options="commissionProfessionalOptions"
-          style="min-width: 220px;"
+          class="w-full sm:w-auto" style="min-width: 180px;"
           @update:model-value="commissionProFilter = $event === '__all__' ? null : ($event as string)"
         />
       </div>
 
       <!-- Cards per professional -->
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div
           v-for="c in filteredCommissions"
           :key="c.professionalId"
@@ -1200,7 +1200,7 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
           </div>
 
           <!-- Metrics -->
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+          <div class="grid grid-cols-3 gap-3 mb-4">
             <div>
               <div style="font-size: 11px; color: var(--zima-text-muted); margin-bottom: 2px;">Atendimentos</div>
               <div style="font-size: 18px; font-weight: 700; color: var(--zima-text-primary);">{{ c.appointments }}</div>
@@ -1507,11 +1507,11 @@ v-if="drawerTx && drawerTx.status !== 'CANCELLED'" variant="danger" size="sm"
     <ZimaModal v-model="newTxOpen" :title="newTxType === 'INCOME' ? 'Nova Receita' : 'Nova Despesa'" size="md">
       <div class="flex flex-col gap-4">
         <ZimaInput v-model="newTxForm.description" label="Descrição *" placeholder="Ex: Corte + Escova — Maria Silva" />
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ZimaInput v-model="newTxForm.amount" label="Valor (R$) *" type="number" placeholder="0,00" />
           <ZimaInput v-model="newTxForm.date" label="Data" type="date" />
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <div style="font-size: 12px; color: var(--zima-text-secondary); margin-bottom: 6px;">Categoria *</div>
             <ZimaSelect v-model="newTxForm.category" :options="newTxType === 'INCOME' ? catIncomeOptions.slice(1) : catExpenseOptions.slice(1)" />

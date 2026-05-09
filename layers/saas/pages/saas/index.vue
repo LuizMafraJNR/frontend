@@ -408,12 +408,13 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
           <template #chart>
             <div class="flex items-end justify-end" style="height: 32px; margin-bottom: -4px;">
               <svg
-                width="80"
+                width="100%"
                 height="32"
                 viewBox="0 0 80 32"
+                preserveAspectRatio="none"
                 fill="none"
                 aria-hidden="true"
-                style="overflow: visible;"
+                style="overflow: visible; display: block;"
               >
                 <!-- Area fill -->
                 <path

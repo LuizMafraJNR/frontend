@@ -15,6 +15,10 @@ const {
   toggleAutomation, addAutomation, addConvFlow, duplicateFlow, deleteFlow,
 } = useAI()
 
+// ── Responsividade ────────────────────────────────────────────────────────────
+const { width: _iaWidth } = useWindowSize()
+const isMobile = computed(() => _iaWidth.value < 640)
+
 // ── Active tab ────────────────────────────────────────────────────────────────
 type TabKey = 'painel' | 'agente' | 'conhecimento' | 'fluxos' | 'automacoes'
 const activeTab = ref<TabKey>((route.query.tab as TabKey) || 'painel')
@@ -419,7 +423,7 @@ const formatRelative = (iso: string) => {
     <!-- ── TAB: PAINEL ──────────────────────────────────────────────────────── -->
     <div v-if="activeTab === 'painel'">
       <!-- KPI Cards -->
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
         <ZimaKpiCard label="Conversas Hoje" :value="dashboard.todayConversations" change="+12" icon="i-lucide-message-circle" />
         <div style="padding:20px; background:var(--zima-bg-surface-2); border-radius:var(--zima-radius-lg); border:1px solid var(--zima-border-default);">
           <div style="font-size:11px; font-weight:600; color:var(--zima-text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px;">Resolvidas pela IA</div>
@@ -443,7 +447,7 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
       </div>
 
       <!-- Charts -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px;">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-7">
         <!-- Bar chart -->
         <div style="padding:20px; background:var(--zima-bg-surface-2); border-radius:var(--zima-radius-lg); border:1px solid var(--zima-border-default);">
           <div style="font-size:14px; font-weight:600; color:var(--zima-text-primary); margin-bottom:16px;">Conversas por dia (30 dias)</div>
@@ -479,10 +483,12 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
           </div>
         </div>
 
-        <!-- Heatmap -->
+        <!-- Heatmap (desktop/tablet) / Lista de picos (mobile) -->
         <div style="padding:20px; background:var(--zima-bg-surface-2); border-radius:var(--zima-radius-lg); border:1px solid var(--zima-border-default);">
           <div style="font-size:14px; font-weight:600; color:var(--zima-text-primary); margin-bottom:16px;">Horários de pico semanal</div>
-          <div style="display:flex; gap:6px; align-items:flex-start;">
+
+          <!-- Heatmap — somente em md+ -->
+          <div v-if="!isMobile" style="display:flex; gap:6px; align-items:flex-start;">
             <div style="display:flex; flex-direction:column; gap:2px; flex-shrink:0;">
               <div v-for="day in heatmapDays" :key="day" style="height:12px; font-size:9px; color:var(--zima-text-muted); line-height:12px; width:24px; text-align:right; padding-right:4px;">{{ day }}</div>
             </div>
@@ -496,12 +502,30 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
                   :style="{ background: val > 0.01 ? `rgba(59,130,246,${Math.min(val + 0.05, 0.85)})` : 'rgba(148,163,184,0.04)' }"
                 />
               </div>
-              <!-- Hour labels -->
               <div style="display:grid; grid-template-columns:repeat(24,1fr); gap:1px; margin-top:3px;">
                 <div v-for="h in 24" :key="h" style="font-size:8px; color:var(--zima-text-muted); text-align:center;">
                   {{ h % 6 === 1 ? (h - 1) + 'h' : '' }}
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Lista de picos — somente em mobile -->
+          <div v-else style="display:flex; flex-direction:column; gap:8px;">
+            <div
+              v-for="(day, di) in heatmapDays"
+              :key="day"
+              style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(148,163,184,0.05); border-radius:6px;"
+            >
+              <span style="font-size:12px; font-weight:500; color:var(--zima-text-secondary); width:28px;">{{ day }}</span>
+              <div style="flex:1; margin:0 10px; height:4px; background:rgba(148,163,184,0.1); border-radius:2px; overflow:hidden;">
+                <div
+                  :style="{ width: Math.round(Math.max(...(dashboard.heatmapData[di] || [0])) * 100) + '%', background: '#3B82F6', height: '100%' }"
+                />
+              </div>
+              <span style="font-size:11px; color:var(--zima-text-muted); white-space:nowrap;">
+                pico {{ dashboard.heatmapData[di] ? (dashboard.heatmapData[di].indexOf(Math.max(...dashboard.heatmapData[di]))) + 'h' : '—' }}
+              </span>
             </div>
           </div>
         </div>
@@ -512,7 +536,8 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
         <div style="padding:16px 20px; border-bottom:1px solid var(--zima-border-divider);">
           <div style="font-size:14px; font-weight:600; color:var(--zima-text-primary);">Perguntas mais frequentes (Top 10)</div>
         </div>
-        <table style="width:100%; border-collapse:collapse;">
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table style="width:100%; min-width:400px; border-collapse:collapse;">
           <thead>
             <tr style="background:rgba(148,163,184,0.04);">
               <th style="padding:10px 20px; text-align:left; font-size:11px; font-weight:600; color:var(--zima-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Pergunta</th>
@@ -543,6 +568,7 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <!-- Últimas não resolvidas -->
@@ -569,7 +595,7 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
 
     <!-- ── TAB: AGENTE ──────────────────────────────────────────────────────── -->
     <div v-else-if="activeTab === 'agente'">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px; align-items:start;">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         <!-- Coluna esquerda: formulário -->
         <div class="flex flex-col gap-6">
           <!-- Identidade -->
@@ -579,7 +605,7 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
               <ZimaInput v-model="localConfig.name" label="Nome do assistente" placeholder="Como seu assistente se chama?" />
               <div>
                 <div style="font-size:13px; font-weight:500; color:var(--zima-text-secondary); margin-bottom:8px;">Avatar</div>
-                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+                <div class="grid grid-cols-3 md:grid-cols-4 gap-2">
                   <div
                     v-for="av in predefinedAvatars"
                     :key="av.id"
@@ -730,10 +756,10 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
       </div>
 
       <!-- Header actions -->
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;">
-        <div style="display:flex; align-items:center; gap:8px; flex:1;">
-          <ZimaInput v-model="kbSearch" placeholder="Buscar conhecimentos..." style="max-width:280px;" />
-          <ZimaSelect v-model="kbCategoryFilter" :options="[{label:'Todas categorias',value:''}, ...categoryOptions]" style="width:160px;" />
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+          <ZimaInput v-model="kbSearch" placeholder="Buscar conhecimentos..." class="w-full md:max-w-[280px]" />
+          <ZimaSelect v-model="kbCategoryFilter" :options="[{label:'Todas categorias',value:''}, ...categoryOptions]" class="w-full md:w-40" />
         </div>
         <div style="display:flex; gap:8px;">
           <ZimaButton variant="ghost" @click="importInputRef?.click()">
@@ -828,7 +854,7 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
       </div>
 
       <!-- Lista de fluxos -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px;">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <div
           v-for="flow in convFlows"
           :key="flow.id"

@@ -10,6 +10,11 @@ const router = useRouter()
 const toast = useZimaToast()
 const { campaigns, addCampaign, sendCampaign, scheduleCampaign, updateCampaign, deleteCampaign } = useCampaigns()
 
+// ── Responsividade ───────────────────────────────────────────────────────────
+const { width: _campWidth } = useWindowSize()
+const isMobile = computed(() => _campWidth.value < 640)
+const showMobilePreview = ref(false)
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 type TabKey = 'ativas' | 'rascunhos' | 'enviadas' | 'agendadas'
 const activeTab = ref<TabKey>((route.query.tab as TabKey) || 'ativas')
@@ -426,7 +431,7 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
 
           <div>
             <div style="font-size:13px; font-weight:500; color:var(--zima-text-secondary); margin-bottom:10px;">Tipo de campanha</div>
-            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div
                 v-for="t in campaignTypes"
                 :key="t.key"
@@ -496,8 +501,17 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
 
         <!-- Step 3: Mensagem -->
         <div v-else-if="currentStep === 'mensagem'">
-          <div style="display:grid; grid-template-columns:1fr 280px; gap:24px;">
-            <div class="flex flex-col gap-4">
+          <!-- Toggle preview mobile -->
+          <div v-if="isMobile" class="flex justify-end mb-3">
+            <button
+              style="font-size:12px; color:var(--zima-blue-core); background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:6px; padding:5px 12px; cursor:pointer;"
+              @click="showMobilePreview = !showMobilePreview"
+            >
+              {{ showMobilePreview ? '← Editar mensagem' : 'Ver preview →' }}
+            </button>
+          </div>
+          <div :class="isMobile ? 'flex flex-col gap-4' : 'grid gap-6'" :style="isMobile ? {} : { gridTemplateColumns: '1fr 280px' }">
+            <div v-show="!isMobile || !showMobilePreview" class="flex flex-col gap-4">
               <!-- Subject for email -->
               <ZimaInput v-if="form.channel === 'email'" v-model="form.subject" label="Assunto do email" placeholder="Ex: Oferta especial para você!" />
 
@@ -546,7 +560,7 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
             </div>
 
             <!-- Phone preview -->
-            <div>
+            <div v-show="!isMobile || showMobilePreview">
               <div style="font-size:12px; font-weight:500; color:var(--zima-text-muted); margin-bottom:8px; text-align:center;">Preview</div>
               <ZimaPhonePreview agent-name="Studio Beleza" :messages="previewMessages" />
             </div>

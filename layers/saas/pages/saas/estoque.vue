@@ -798,7 +798,7 @@ const exportProductsCSV = () => {
     <!-- ══════════════════════════════════════════════════════════════ -->
     <div v-if="activeTab === 'produtos'">
       <!-- KPIs -->
-      <div class="grid grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <ZimaKpiCard
           label="Produtos Ativos"
           :value="String(kpi.totalProducts)"
@@ -849,8 +849,8 @@ const exportProductsCSV = () => {
             }"
           >
         </div>
-        <ZimaSelect v-model="productCategoryFilter" :options="categoryOptions" style="min-width:160px;" />
-        <ZimaSelect v-model="productStatusFilter" :options="statusOptions" style="min-width:160px;" />
+        <ZimaSelect v-model="productCategoryFilter" :options="categoryOptions" class="w-full sm:w-auto" style="min-width:140px;" />
+        <ZimaSelect v-model="productStatusFilter" :options="statusOptions" class="w-full sm:w-auto" style="min-width:140px;" />
         <!-- Toggle view -->
         <div
           class="flex"
@@ -958,7 +958,7 @@ const exportProductsCSV = () => {
           <template #cell-estoque="{ row }">
             <div class="flex items-center gap-2 justify-end">
               <span :style="{ fontSize: '13px', fontFamily: 'monospace', fontWeight: '500', color: stockBarColor(row as Product) }">{{ (row as Product).stock }}</span>
-              <div :style="{ width: '50px', height: '4px', background: 'rgba(148,163,184,0.15)', borderRadius: '2px', overflow: 'hidden' }">
+              <div :style="{ width: '48px', maxWidth: '80px', flex: '1', height: '4px', background: 'rgba(148,163,184,0.15)', borderRadius: '2px', overflow: 'hidden' }">
                 <div :style="{ width: stockBarWidth(row as Product) + '%', background: stockBarColor(row as Product), height: '100%', transition: 'width 300ms ease' }" />
               </div>
             </div>
@@ -1041,7 +1041,7 @@ const exportProductsCSV = () => {
       </div>
 
       <!-- Visualização Grid -->
-      <div v-else class="grid grid-cols-4 gap-4">
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         <div
           v-for="p in filteredProducts"
           :key="p.id"
@@ -1088,7 +1088,7 @@ const exportProductsCSV = () => {
         </div>
 
         <!-- Estado vazio no grid -->
-        <div v-if="filteredProducts.length === 0" class="col-span-4 py-16 flex flex-col items-center gap-3">
+        <div v-if="filteredProducts.length === 0" class="col-span-full py-16 flex flex-col items-center gap-3">
           <Icon name="i-lucide-package" style="width:40px;height:40px;opacity:0.3;" />
           <p :style="{ color: 'var(--zima-text-muted)', fontSize: '14px' }">Nenhum produto encontrado</p>
         </div>
@@ -1100,8 +1100,8 @@ const exportProductsCSV = () => {
     <!-- ══════════════════════════════════════════════════════════════ -->
     <div v-else-if="activeTab === 'movimentacoes'">
       <div class="flex items-center gap-3 mb-4 flex-wrap">
-        <ZimaSelect v-model="movTypeFilter" :options="movTypeOptions" style="min-width:160px;" />
-        <ZimaSelect v-model="movProductFilter" :options="movProductOptions" style="min-width:200px;" />
+        <ZimaSelect v-model="movTypeFilter" :options="movTypeOptions" class="w-full sm:w-auto" style="min-width:140px;" />
+        <ZimaSelect v-model="movProductFilter" :options="movProductOptions" class="w-full sm:w-auto" style="min-width:160px;" />
         <input
           v-model="movDateFrom"
           type="date"
@@ -1248,7 +1248,7 @@ const exportProductsCSV = () => {
           <Icon name="i-lucide-check-circle" style="width:32px;height:32px;color:#10B981;margin:0 auto 8px;" />
           <p :style="{ color: 'var(--zima-text-muted)', fontSize: '14px' }">Nenhum produto sem estoque. Ótimo!</p>
         </div>
-        <div v-else class="grid grid-cols-2 gap-3">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div
             v-for="p in outOfStockProducts"
             :key="p.id"
@@ -1548,8 +1548,8 @@ const exportProductsCSV = () => {
             <Icon name="i-lucide-camera" style="width:24px;height:24px;opacity:0.5;" />
             <span>Foto</span>
           </div>
-          <div class="flex-1 grid grid-cols-2 gap-3">
-            <div class="col-span-2">
+          <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
               <ZimaInput v-model="productForm.name" label="Nome do produto *" placeholder="Ex: Shampoo Wella Fusion 500ml" />
             </div>
             <div class="flex gap-2 items-end">
@@ -1564,7 +1564,7 @@ const exportProductsCSV = () => {
 
         <!-- Seção 2: Classificação -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Classificação</p>
-        <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
           <div>
             <ZimaSelect v-model="productForm.categoryId" label="Categoria *" :options="categoryOptions" />
           </div>
@@ -1726,7 +1726,7 @@ const exportProductsCSV = () => {
 
         <!-- Seção 5: Classificação de uso -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Uso e Disponibilidade</p>
-        <div class="grid grid-cols-2 gap-4 mb-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div class="flex flex-col gap-3">
             <ZimaToggle v-model="productForm.forSale" label="Disponível para venda ao cliente" />
             <ZimaToggle v-model="productForm.forInternalUse" label="Uso interno (consumido nos serviços)" />
@@ -1829,7 +1829,7 @@ const exportProductsCSV = () => {
     <!-- ══════════════════════════════════════════════════════════════ -->
     <ZimaModal v-model="entryOpen" title="Entrada de Mercadoria" size="lg">
       <div class="p-1">
-        <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
           <ZimaSelect v-model="entryForm.supplierId" label="Fornecedor" :options="supplierOptions" />
           <ZimaInput v-model="entryForm.invoiceNumber" label="Nº da Nota Fiscal" placeholder="000123" />
           <div>
@@ -2159,7 +2159,7 @@ const exportProductsCSV = () => {
             @input="maskCnpj"
           >
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ZimaInput v-model="supplierForm.contact" label="Nome do contato" placeholder="Ex: Carlos Mendes" />
           <ZimaInput v-model="supplierForm.phone" label="Telefone" placeholder="(11) 98765-4321" />
         </div>

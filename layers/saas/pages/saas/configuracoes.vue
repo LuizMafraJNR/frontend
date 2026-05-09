@@ -474,8 +474,8 @@ const formatRole = (role: string) => roleLabels[role] ?? role
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="col-span-full">
               <ZimaInput
                 v-model="negocio.nome"
                 label="Nome do Estabelecimento"
@@ -536,7 +536,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
             Endereço
           </div>
 
-          <div class="grid grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <ZimaInput
               v-model="negocio.cep"
               label="CEP"
@@ -547,25 +547,25 @@ const formatRole = (role: string) => roleLabels[role] ?? role
               v-model="negocio.endereco"
               label="Logradouro"
               placeholder="Rua, Avenida..."
-              class="col-span-3"
+              class="col-span-1 sm:col-span-3"
             />
             <ZimaInput
               v-model="negocio.complemento"
               label="Complemento"
               placeholder="Sala, Andar..."
-              class="col-span-2"
+              class="col-span-1"
             />
             <ZimaInput
               v-model="negocio.bairro"
               label="Bairro"
               placeholder="Bairro"
-              class="col-span-2"
+              class="col-span-1"
             />
             <ZimaInput
               v-model="negocio.cidade"
               label="Cidade"
               placeholder="Cidade"
-              class="col-span-3"
+              class="col-span-1 sm:col-span-3"
             />
             <ZimaSelect
               v-model="negocio.estado"
@@ -627,39 +627,43 @@ const formatRole = (role: string) => roleLabels[role] ?? role
             <div
               v-for="day in schedule"
               :key="day.key"
-              class="flex items-center gap-4"
               style="padding: 10px 0; border-bottom: 1px solid var(--zima-border-divider);"
             >
-              <!-- Toggle -->
-              <ZimaToggle v-model="day.active" />
+              <!-- Desktop: linha única -->
+              <div class="hidden sm:flex items-center gap-4">
+                <ZimaToggle v-model="day.active" />
+                <span
+                  style="width: 140px; font-size: 14px; flex-shrink: 0;"
+                  :style="{ color: day.active ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)' }"
+                >
+                  {{ day.label }}
+                </span>
+                <template v-if="day.active">
+                  <ZimaSelect v-model="day.open" :options="timeOptions" placeholder="Abertura" style="width: 120px;" />
+                  <span style="color: var(--zima-text-muted); font-size: 14px;">até</span>
+                  <ZimaSelect v-model="day.close" :options="timeOptions" placeholder="Fechamento" style="width: 120px;" />
+                </template>
+                <span v-else style="font-size: 14px; color: var(--zima-text-muted); font-style: italic;">Fechado</span>
+              </div>
 
-              <!-- Nome do dia -->
-              <span
-                style="width: 140px; font-size: 14px; flex-shrink: 0;"
-                :style="{ color: day.active ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)' }"
-              >
-                {{ day.label }}
-              </span>
-
-              <!-- Horários -->
-              <template v-if="day.active">
-                <ZimaSelect
-                  v-model="day.open"
-                  :options="timeOptions"
-                  placeholder="Abertura"
-                  style="width: 120px;"
-                />
-                <span style="color: var(--zima-text-muted); font-size: 14px;">até</span>
-                <ZimaSelect
-                  v-model="day.close"
-                  :options="timeOptions"
-                  placeholder="Fechamento"
-                  style="width: 120px;"
-                />
-              </template>
-              <span v-else style="font-size: 14px; color: var(--zima-text-muted); font-style: italic;">
-                Fechado
-              </span>
+              <!-- Mobile: card empilhado -->
+              <div class="flex flex-col gap-2 sm:hidden">
+                <div class="flex items-center justify-between">
+                  <span
+                    style="font-size: 14px; font-weight: 500;"
+                    :style="{ color: day.active ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)' }"
+                  >
+                    {{ day.label }}
+                  </span>
+                  <ZimaToggle v-model="day.active" />
+                </div>
+                <div v-if="day.active" class="flex items-center gap-2">
+                  <ZimaSelect v-model="day.open" :options="timeOptions" placeholder="Abertura" class="flex-1" />
+                  <span style="color: var(--zima-text-muted); font-size: 13px; flex-shrink: 0;">até</span>
+                  <ZimaSelect v-model="day.close" :options="timeOptions" placeholder="Fechamento" class="flex-1" />
+                </div>
+                <span v-else style="font-size: 13px; color: var(--zima-text-muted); font-style: italic;">Fechado</span>
+              </div>
             </div>
           </div>
 
@@ -687,8 +691,8 @@ const formatRole = (role: string) => roleLabels[role] ?? role
           <div style="font-size: 13px; font-weight: 600; color: var(--zima-text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;">
             Convidar Membro
           </div>
-          <div class="flex gap-3 items-end">
-            <div class="flex-1">
+          <div class="flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[180px]">
               <ZimaInput
                 v-model="inviteEmail"
                 label="E-mail"
@@ -816,8 +820,8 @@ const formatRole = (role: string) => roleLabels[role] ?? role
               Matriz de Permissões
             </span>
           </div>
-          <div style="padding: 16px 20px; overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <div style="padding: 16px 20px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table style="width: 100%; min-width: 480px; border-collapse: collapse; font-size: 13px;">
               <thead>
                 <tr>
                   <th style="text-align: left; padding: 6px 12px 10px 0; color: var(--zima-text-muted); font-weight: 500; width: 140px;">
@@ -982,7 +986,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ZimaCard
             v-for="integration in integrations"
             :key="integration.id"

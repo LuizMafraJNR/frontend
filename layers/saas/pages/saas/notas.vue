@@ -515,7 +515,7 @@ const sectionCard = {
 <template>
   <div>
     <!-- Header -->
-    <div class="flex items-start justify-between mb-6">
+    <div class="flex items-start justify-between gap-3 flex-wrap mb-6">
       <div>
         <h1 :style="{ fontSize: '24px', fontWeight: '600', color: 'var(--zima-text-primary)', marginBottom: '4px' }">
           Notas Fiscais
@@ -524,7 +524,7 @@ const sectionCard = {
           Emissão e gestão de NFS-e e NF-e
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <ZimaButton variant="ghost" size="sm" @click="openNfe">
           <Icon name="i-lucide-file-plus" style="width:14px;height:14px;margin-right:6px;" />
           + Emitir NF-e
@@ -537,7 +537,7 @@ const sectionCard = {
     </div>
 
     <!-- Sub-tabs -->
-    <div style="border-bottom: 1px solid var(--zima-border-divider); display: flex; gap: 4px; margin-bottom: 24px;">
+    <div class="overflow-x-auto hide-scrollbar" style="border-bottom: 1px solid var(--zima-border-divider); display: flex; gap: 4px; margin-bottom: 24px;">
       <button
         v-for="tab in tabs"
         :key="tab.key"
@@ -581,8 +581,8 @@ const sectionCard = {
             }"
           >
         </div>
-        <ZimaSelect v-if="activeTab === 'todas'" v-model="typeFilter" :options="typeOptions" style="min-width:150px" />
-        <ZimaSelect v-model="statusFilter" :options="statusOptions" style="min-width:150px" />
+        <ZimaSelect v-if="activeTab === 'todas'" v-model="typeFilter" :options="typeOptions" class="w-full sm:w-auto" style="min-width:130px" />
+        <ZimaSelect v-model="statusFilter" :options="statusOptions" class="w-full sm:w-auto" style="min-width:130px" />
         <input
           v-model="dateFrom"
           type="date"
@@ -777,7 +777,7 @@ const sectionCard = {
         <h2 :style="{ fontSize: '15px', fontWeight: '600', color: 'var(--zima-text-primary)', marginBottom: '16px' }">
           Dados do Emitente
         </h2>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">CNPJ *</label>
             <input
@@ -793,7 +793,7 @@ const sectionCard = {
           <ZimaInput v-model="configForm.inscricaoMunicipal" label="Inscrição Municipal *" placeholder="12.345.678-9" />
           <ZimaInput v-model="configForm.inscricaoEstadual" label="Inscrição Estadual" placeholder="Apenas para NF-e" />
           <ZimaInput v-model="configForm.municipioIbge" label="Código IBGE do Município" placeholder="3550308" />
-          <div class="col-span-2">
+          <div class="col-span-full">
             <ZimaInput v-model="configForm.endereco" label="Endereço completo *" placeholder="Rua das Flores, 123 — Jardim América — São Paulo/SP — CEP 01234-567" />
           </div>
         </div>
@@ -818,7 +818,7 @@ const sectionCard = {
         </div>
 
         <!-- Simples Nacional -->
-        <div v-else-if="configForm.regimeTributario === 'SN'" class="grid grid-cols-3 gap-4">
+        <div v-else-if="configForm.regimeTributario === 'SN'" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <ZimaSelect v-model="configForm.snAnexo" label="Anexo do Simples" :options="snAnexoOptions" />
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Alíquota Efetiva (%)</label>
@@ -831,7 +831,7 @@ const sectionCard = {
         </div>
 
         <!-- Lucro Presumido -->
-        <div v-else-if="configForm.regimeTributario === 'LP'" class="grid grid-cols-2 gap-4">
+        <div v-else-if="configForm.regimeTributario === 'LP'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">PIS (%)</label>
             <input v-model.number="configForm.lpPisAliquota" type="number" step="0.01" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
@@ -840,7 +840,7 @@ const sectionCard = {
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">COFINS (%)</label>
             <input v-model.number="configForm.lpCofinsAliquota" type="number" step="0.01" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >
           </div>
-          <div class="col-span-2" :style="{ padding: '12px', background: 'rgba(148,163,184,0.06)', borderRadius: 'var(--zima-radius-md)' }">
+          <div class="col-span-full" :style="{ padding: '12px', background: 'rgba(148,163,184,0.06)', borderRadius: 'var(--zima-radius-md)' }">
             <p :style="{ fontSize: '13px', color: 'var(--zima-text-muted)' }">IRPJ e CSLL são calculados trimestralmente sobre o lucro presumido e devem ser recolhidos separadamente. Consulte seu contador para as alíquotas corretas.</p>
           </div>
         </div>
@@ -923,8 +923,8 @@ const sectionCard = {
         <h2 :style="{ fontSize: '15px', fontWeight: '600', color: 'var(--zima-text-primary)', marginBottom: '16px' }">
           Configurações NFS-e
         </h2>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="col-span-full">
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Prefeitura / Município</label>
             <select
               :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }"
@@ -934,7 +934,7 @@ const sectionCard = {
               <option v-for="m in MUNICIPIOS_NFSE" :key="m.value" :value="m.value">{{ m.label }}</option>
             </select>
           </div>
-          <div class="col-span-2">
+          <div class="col-span-full">
             <ZimaInput v-model="configForm.nfseWebserviceUrl" label="URL do Webservice" placeholder="https://nfe.prefeitura.sp.gov.br/..." />
           </div>
           <ZimaInput v-model="configForm.nfseUsuario" label="Usuário do Webservice" placeholder="usuario@empresa" />
@@ -947,7 +947,7 @@ const sectionCard = {
               :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }"
             >
           </div>
-          <div class="col-span-2">
+          <div class="col-span-full">
             <ZimaButton variant="ghost" size="sm" :loading="testingConnection" @click="testConnection">
               <Icon name="i-lucide-wifi" style="width:14px;height:14px;margin-right:6px;" />
               Testar conexão
@@ -993,7 +993,7 @@ const sectionCard = {
           <p :style="{ fontSize: '13px', color: '#F59E0B' }">Em homologação, as notas emitidas são apenas para testes e não têm validade fiscal. Mude para Produção quando estiver pronto para emitir notas reais.</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ZimaInput v-model="configForm.nfeSerie" label="Série da NF-e" placeholder="1" />
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Próximo número</label>
@@ -1009,7 +1009,7 @@ const sectionCard = {
         <h2 :style="{ fontSize: '15px', fontWeight: '600', color: 'var(--zima-text-primary)', marginBottom: '16px' }">
           Configurações Padrão
         </h2>
-        <div class="grid grid-cols-2 gap-4 mb-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div>
             <label :style="{ display: 'block', fontSize: '13px', color: 'var(--zima-text-muted)', marginBottom: '6px' }">Alíquota ISS padrão (%)</label>
             <input v-model.number="configForm.issAliquotaPadrao" type="number" step="0.01" min="0" max="100" :style="{ width: '100%', height: '38px', padding: '0 12px', background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', color: 'var(--zima-text-primary)', fontSize: '14px' }" >

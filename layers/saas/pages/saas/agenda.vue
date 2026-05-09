@@ -253,7 +253,8 @@ const listColumns = computed(() => [
           v-if="viewMode !== 'list'"
           v-model="professionalSelectValue"
           :options="professionalOptions"
-          style="width: 100%; max-width: 200px;"
+          class="w-full sm:w-auto"
+          style="max-width: 200px;"
         />
 
         <!-- Navegação de data -->
@@ -301,7 +302,7 @@ const listColumns = computed(() => [
 
     <!-- ── Visualização: Dia ──────────────────────────────────────────────── -->
     <template v-else-if="viewMode === 'day'">
-      <ZimaCard padding="none" class="overflow-hidden">
+      <ZimaCard padding="none" class="overflow-hidden overflow-x-auto">
         <SaasAgendaDayView
           :appointments="appointmentsForView"
           :professionals="visibleProfessionals"
@@ -315,7 +316,7 @@ const listColumns = computed(() => [
 
     <!-- ── Visualização: Semana ───────────────────────────────────────────── -->
     <template v-else-if="viewMode === 'week'">
-      <ZimaCard padding="none" class="overflow-hidden">
+      <ZimaCard padding="none" class="overflow-hidden overflow-x-auto">
         <SaasAgendaWeekView
           :appointments="appointmentsForView"
           :date="currentDate"

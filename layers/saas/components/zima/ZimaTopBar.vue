@@ -103,13 +103,21 @@ const { toggleSidebarMobile } = useSaasLayout()
       <Icon name="i-lucide-menu" style="width:16px; height:16px;" />
     </button>
 
-    <!-- Left: Breadcrumbs -->
+    <!-- Left: Breadcrumbs (full em md+, só último em mobile) -->
     <nav
       v-if="breadcrumbs.length"
       aria-label="Breadcrumb"
       class="flex items-center gap-1 flex-1 min-w-0"
     >
-      <ol class="flex items-center gap-1 text-xs" style="color: var(--zima-text-muted);">
+      <!-- Mobile: só o último segmento -->
+      <span
+        class="flex md:hidden text-xs truncate"
+        :style="{ color: 'var(--zima-text-secondary)' }"
+      >
+        {{ breadcrumbs[breadcrumbs.length - 1]?.label }}
+      </span>
+      <!-- Desktop: breadcrumbs completos -->
+      <ol class="hidden md:flex items-center gap-1 text-xs" style="color: var(--zima-text-muted);">
         <li
           v-for="(crumb, idx) in breadcrumbs"
           :key="idx"
@@ -139,6 +147,16 @@ const { toggleSidebarMobile } = useSaasLayout()
       </ol>
     </nav>
     <div v-else class="flex-1" />
+
+    <!-- Mobile search icon (visible <md) -->
+    <button
+      class="flex md:hidden items-center justify-center rounded-md"
+      style="width:32px; height:32px; background:var(--zima-bg-surface-2); border:1px solid var(--zima-border-default); color:var(--zima-text-secondary); flex-shrink:0;"
+      aria-label="Abrir busca global"
+      @click="openCommandPalette"
+    >
+      <Icon name="i-lucide-search" style="width:15px; height:15px;" />
+    </button>
 
     <!-- Center: Global Search (Command Palette trigger) — oculto em telas estreitas -->
     <button
