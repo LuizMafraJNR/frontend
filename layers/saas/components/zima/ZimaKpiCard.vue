@@ -25,10 +25,10 @@ const emit = defineEmits<{
 }>()
 
 const isPositive = computed(() =>
-  props.change !== undefined && !props.change.startsWith('-')
+  props.change != null && !props.change.startsWith('-')
 )
 const isNegative = computed(() =>
-  props.change !== undefined && props.change.startsWith('-')
+  props.change != null && props.change.startsWith('-')
 )
 </script>
 
@@ -50,10 +50,18 @@ const isNegative = computed(() =>
     data-testid="zima-kpi-card"
     @click="clickable && emit('click')"
     @mouseenter="(e: MouseEvent) => {
-      if (clickable) (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'
+      if (clickable) {
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = 'var(--zima-shadow-sm)'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
+      }
     }"
     @mouseleave="(e: MouseEvent) => {
-      if (clickable) (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'
+      if (clickable) {
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+        ;(e.currentTarget as HTMLElement).style.transform = ''
+      }
     }"
   >
     <!-- Header: label + icon -->
@@ -121,12 +129,14 @@ const isNegative = computed(() =>
     <template v-else>
       <!-- Main value -->
       <div
-        class="font-bold leading-none"
+        class="font-bold"
         :style="{
-          fontSize: '28px',
+          fontSize: '26px',
+          lineHeight: '1.1',
           color: 'var(--zima-text-primary)',
           fontFamily: 'var(--zima-font-mono)',
           fontWeight: '700',
+          letterSpacing: '-0.02em',
         }"
       >
         {{ value }}

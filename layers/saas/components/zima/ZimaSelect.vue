@@ -68,7 +68,7 @@ const closeDropdown = () => {
 }
 
 const positionDropdown = () => {
-  if (!triggerRef.value) return
+  if (!import.meta.client || !triggerRef.value) return
   const rect = triggerRef.value.getBoundingClientRect()
   const spaceBelow = window.innerHeight - rect.bottom
   const dropdownH = Math.min(props.options.length * 36 + 16, 280)

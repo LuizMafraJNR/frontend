@@ -125,6 +125,21 @@
   --zima-topbar-height:          56px;
   --zima-content-max-width:      1280px;
   --zima-content-padding:        24px;
+
+  /* ======================================================
+     ESPAÇAMENTO DE PÁGINA — Escala consistente
+     ====================================================== */
+  --zima-page-gap:       24px;   /* entre seções principais de uma página */
+  --zima-section-gap:    16px;   /* entre elementos dentro de uma seção */
+
+  /* ======================================================
+     COMPONENTES — Alturas padrão
+     ====================================================== */
+  --zima-card-header-h:  52px;   /* altura do header interno de ZimaCard */
+  --zima-row-height:     48px;   /* linha de tabela (igual --zima-table-row-height) */
+  --zima-toolbar-height: 44px;   /* barra de filtros/toolbar */
+  --zima-time-slot-h:    40px;   /* altura de um bloco de horário */
+  --zima-input-h:        36px;   /* altura de inputs (explicitado aqui) */
 }
 
 @media (max-width: 1023px) {
@@ -178,6 +193,19 @@
   --zima-table-row-hover:         rgba(59, 130, 246, 0.04);
   --zima-table-row-selected:      rgba(59, 130, 246, 0.08);
   --zima-table-border:            rgba(148, 163, 184, 0.06);
+
+  /* ======================================================
+     TOPBAR — Scroll-aware
+     ====================================================== */
+  --zima-topbar-bg-scrolled:    rgba(7, 9, 14, 0.88);
+  --zima-topbar-blur:           blur(14px) saturate(1.8);
+  --zima-topbar-transition:     background 200ms ease, border-color 200ms ease, backdrop-filter 200ms ease;
+
+  /* ======================================================
+     SIDEBAR — Detalhes
+     ====================================================== */
+  --zima-sidebar-footer-fade:   linear-gradient(to bottom, transparent, var(--zima-bg-surface-1));
+  --zima-sidebar-separator:     linear-gradient(to right, transparent, var(--zima-border-divider), transparent);
 
   /* ======================================================
      COMPONENTES ESPECÍFICOS

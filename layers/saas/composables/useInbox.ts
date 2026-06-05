@@ -81,7 +81,6 @@ const MSG_CONV3: InboxMessage[] = [
 ]
 
 // ── Singleton refs ────────────────────────────────────────────────────────────
-const conversations = ref<Conversation[]>([])
 const loading = ref(false)
 const initialized = ref(false)
 
@@ -192,13 +191,31 @@ const MOCK_CONVERSATIONS: Conversation[] = [
   },
 ]
 
+export interface InternalNote {
+  id: string
+  author: string
+  text: string
+  at: string
+}
+
+// Singleton persistido — declarado após MOCK_CONVERSATIONS (seed avaliado na criação).
+const conversations = persistedRef<Conversation[]>('inbox:conversations', () => MOCK_CONVERSATIONS.map(c => ({ ...c, messages: [...c.messages] })))
+
+// Notas internas por conversationId (persistidas).
+const internalNotesByConv = persistedRef<Record<string, InternalNote[]>>('inbox:notes', () => ({
+  'conv-1': [
+    { id: 'note-seed-1', author: 'Ana Costa', text: 'Cliente prefere atendimento pela manhã.', at: new Date(Date.now() - 86400000 * 3).toISOString() },
+    { id: 'note-seed-2', author: 'Você', text: 'Alergias a produtos com amônia.', at: new Date(Date.now() - 86400000).toISOString() },
+  ],
+}))
+
 // ── Composable ────────────────────────────────────────────────────────────────
 export const useInbox = () => {
   const fetchAll = async () => {
     if (initialized.value) return
     loading.value = true
     await new Promise(r => setTimeout(r, 350))
-    conversations.value = MOCK_CONVERSATIONS.map(c => ({ ...c, messages: [...c.messages] }))
+    // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
     initialized.value = true
     loading.value = false
   }
@@ -299,6 +316,29 @@ export const useInbox = () => {
     conv.blocked = value
   }
 
+  // ── Notas internas (persistidas por conversa) ──────────────────────────────
+  const getNotes = (conversationId: string): InternalNote[] =>
+    internalNotesByConv.value[conversationId] ?? []
+
+  const addNote = (conversationId: string, text: string, author = 'Você'): void => {
+    const clean = text.trim()
+    if (!clean) return
+    const list = internalNotesByConv.value[conversationId] ?? []
+    internalNotesByConv.value = {
+      ...internalNotesByConv.value,
+      [conversationId]: [
+        { id: `note-${Date.now()}`, author, text: clean, at: new Date().toISOString() },
+        ...list,
+      ],
+    }
+  }
+
+  // ── Tags do cliente (persistem na conversa) ────────────────────────────────
+  const setClientTags = (conversationId: string, tags: string[]): void => {
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (conv) conv.clientTags = [...tags]
+  }
+
   return {
     conversations,
     loading,
@@ -312,5 +352,8 @@ export const useInbox = () => {
     totalUnread,
     waitingCount,
     setBlocked,
+    getNotes,
+    addNote,
+    setClientTags,
   }
 }

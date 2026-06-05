@@ -82,8 +82,8 @@ export interface AIDashboard {
   unresolved: UnresolvedConversation[]
 }
 
-// ── Singleton state ───────────────────────────────────────────────────────────
-const agentConfig = ref<AIAgentConfig>({
+// ── Singleton state (persistido — SSR-safe) ─────────────────────────────────────
+const agentConfig = persistedRef<AIAgentConfig>('ai:agentConfig', () => ({
   name: 'Lia',
   description: 'Assistente virtual do Studio Beleza & Estética',
   avatarUrl: null,
@@ -112,9 +112,9 @@ const agentConfig = ref<AIAgentConfig>({
     { key: 'reactivation', label: 'Recuperação de clientes inativos', description: 'IA inicia conversa com clientes que não visitam há X dias.', enabled: false },
     { key: 'order_status', label: 'Informar status de pedidos', description: 'Para pet shops e lojas: IA informa sobre pedidos e entregas.', enabled: false },
   ],
-})
+}))
 
-const knowledgeEntries = ref<KnowledgeEntry[]>([
+const knowledgeEntries = persistedRef<KnowledgeEntry[]>('ai:knowledge', () => [
   {
     id: 'kb-1',
     title: 'Política de cancelamento',
@@ -162,7 +162,7 @@ const knowledgeEntries = ref<KnowledgeEntry[]>([
   },
 ])
 
-const convFlows = ref<ConvFlow[]>([
+const convFlows = persistedRef<ConvFlow[]>('ai:convFlows', () => [
   {
     id: 'flow-1',
     name: 'Agendamento Completo',
@@ -192,7 +192,7 @@ const convFlows = ref<ConvFlow[]>([
   },
 ])
 
-const automations = ref<BusinessAutomation[]>([
+const automations = persistedRef<BusinessAutomation[]>('ai:automations', () => [
   {
     id: 'auto-1',
     name: 'Lembrete 24h antes do agendamento',
@@ -229,13 +229,31 @@ const automations = ref<BusinessAutomation[]>([
 ])
 
 // ── Dashboard mock data ───────────────────────────────────────────────────────
+// PRNG determinístico (mulberry32) com semente fixa: servidor e cliente geram
+// EXATAMENTE os mesmos valores → sem hydration mismatch nos gráficos.
+// (Antes usava Math.random(), que divergia entre SSR e cliente.)
+const seededRandom = (seed: number) => {
+  let s = seed >>> 0
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0
+    let t = s
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 const generateDailyData = () => {
+  const rand = seededRandom(20260531) // semente fixa
   const data: { day: string; ai: number; human: number }[] = []
+  // Base de data estável (apenas dia/mês — sem hora, evita divergência de timezone/instante).
+  const base = new Date()
+  base.setHours(12, 0, 0, 0)
   for (let i = 29; i >= 0; i--) {
-    const d = new Date()
+    const d = new Date(base)
     d.setDate(d.getDate() - i)
-    const total = Math.floor(Math.random() * 40) + 15
-    const ai = Math.floor(total * (0.65 + Math.random() * 0.25))
+    const total = Math.floor(rand() * 40) + 15
+    const ai = Math.floor(total * (0.65 + rand() * 0.25))
     data.push({
       day: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       ai,
@@ -246,6 +264,7 @@ const generateDailyData = () => {
 }
 
 const generateHeatmap = () => {
+  const rand = seededRandom(73219) // semente fixa
   const days = 7
   const hours = 24
   const data: number[][] = []
@@ -257,7 +276,7 @@ const generateHeatmap = () => {
       const isWeekend = d >= 5
       const base = isPeak ? 0.4 : 0.05
       const weekendMultiplier = isWeekend ? 0.3 : 1
-      row.push(Math.random() * base * weekendMultiplier + (isPeak && !isWeekend ? 0.2 : 0))
+      row.push(rand() * base * weekendMultiplier + (isPeak && !isWeekend ? 0.2 : 0))
     }
     data.push(row)
   }

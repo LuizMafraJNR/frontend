@@ -243,16 +243,11 @@ const formatPrice = (price: number) =>
   <div>
   <div class="flex flex-col gap-6" data-testid="page-servicos">
     <!-- Page Header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-      <div>
-        <h1 class="text-2xl font-semibold" :style="{ color: 'var(--zima-text-primary)' }">
-          Serviços
-        </h1>
-        <p class="text-sm mt-0.5" :style="{ color: 'var(--zima-text-muted)' }">
-          Gerencie os serviços e categorias oferecidos pelo seu negócio
-        </p>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
+    <ZimaPageHeader
+      title="Serviços"
+      description="Gerencie os serviços e categorias oferecidos pelo seu negócio"
+    >
+      <template #actions>
         <ZimaButton variant="ghost" @click="openNewCategory">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 14px; height: 14px;" /></template>
           Nova Categoria
@@ -261,27 +256,17 @@ const formatPrice = (price: number) =>
           <template #icon-left><Icon name="i-lucide-plus" style="width: 14px; height: 14px;" /></template>
           Novo Serviço
         </ZimaButton>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex items-center gap-1 p-1 rounded-lg w-fit" :style="{ background: 'var(--zima-bg-surface-2)' }">
-      <button
-        v-for="tab in [{ key: 'services', label: 'Serviços' }, { key: 'categories', label: 'Categorias' }]"
-        :key="tab.key"
-        class="px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-        :style="{
-          background: activeTab === tab.key ? 'var(--zima-bg-surface-3)' : 'transparent',
-          color: activeTab === tab.key ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
-          boxShadow: activeTab === tab.key ? 'var(--zima-shadow-sm)' : 'none',
-          border: 'none',
-          cursor: 'pointer',
-        }"
-        @click="activeTab = tab.key as 'services' | 'categories'"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
+      </template>
+      <template #tabs>
+        <ZimaSubTabs
+          v-model="activeTab"
+          :tabs="[
+            { key: 'services', label: 'Serviços' },
+            { key: 'categories', label: 'Categorias' },
+          ]"
+        />
+      </template>
+    </ZimaPageHeader>
 
     <!-- Loading -->
     <template v-if="loading">
@@ -405,7 +390,7 @@ const formatPrice = (price: number) =>
                 <span
                   class="shrink-0"
                   style="
-                    font-family: 'Geist Mono', monospace;
+                    font-family: var(--zima-font-mono);
                     font-size: 13px;
                     color: var(--zima-text-primary);
                     text-align: right;

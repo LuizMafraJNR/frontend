@@ -15,6 +15,25 @@ const {
   toggleAutomation, addAutomation, addConvFlow, duplicateFlow, deleteFlow,
 } = useAI()
 
+const { push: pushNotification } = useNotifications()
+
+// ── Executar automação agora (simulação honesta — dispara o efeito uma vez) ────
+// Não finge um cron: o clique executa o efeito imediato (notificação real),
+// provando que a automação está ligada ao sistema.
+const runningAutomationId = ref<string | null>(null)
+const runAutomationNow = async (auto: { id: string; name: string; actionType: string; actionLabel: string }) => {
+  runningAutomationId.value = auto.id
+  await new Promise(r => setTimeout(r, 500))
+  pushNotification({
+    title: `Automação executada: ${auto.name}`,
+    description: auto.actionLabel,
+    type: 'info',
+    to: '/saas/ia?tab=automacoes',
+  })
+  runningAutomationId.value = null
+  toast.success('Automação executada', `"${auto.name}" disparou uma vez.`)
+}
+
 // ── Responsividade ────────────────────────────────────────────────────────────
 const { width: _iaWidth } = useWindowSize()
 const isMobile = computed(() => _iaWidth.value < 640)
@@ -399,34 +418,22 @@ const formatRelative = (iso: string) => {
 <template>
   <div>
     <!-- Header -->
-    <div style="margin-bottom: 24px;">
-      <h1 style="font-size: 24px; font-weight: 700; color: var(--zima-text-primary); margin: 0 0 4px;">IA & Automação</h1>
-      <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">Configure seu assistente virtual e automatize processos do seu negócio</p>
-    </div>
-
-    <!-- Tabs -->
-    <div style="display:flex; gap:0; border-bottom:1px solid var(--zima-border-divider); margin-bottom:28px; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        style="padding:10px 20px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:500; white-space:nowrap; border-bottom:2px solid transparent; transition:all 150ms; margin-bottom:-1px;"
-        :style="{
-          color: activeTab === tab.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
-          borderBottomColor: activeTab === tab.key ? 'var(--zima-blue-core)' : 'transparent',
-        }"
-        @click="activeTab = tab.key"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
+    <ZimaPageHeader
+      title="IA & Automação"
+      description="Configure seu assistente virtual e automatize processos do seu negócio"
+    >
+      <template #tabs>
+        <ZimaSubTabs v-model="activeTab" :tabs="tabs" />
+      </template>
+    </ZimaPageHeader>
 
     <!-- ── TAB: PAINEL ──────────────────────────────────────────────────────── -->
     <div v-if="activeTab === 'painel'">
       <!-- KPI Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-7">
         <ZimaKpiCard label="Conversas Hoje" :value="dashboard.todayConversations" change="+12" icon="i-lucide-message-circle" />
         <div style="padding:20px; background:var(--zima-bg-surface-2); border-radius:var(--zima-radius-lg); border:1px solid var(--zima-border-default);">
-          <div style="font-size:11px; font-weight:600; color:var(--zima-text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px;">Resolvidas pela IA</div>
+          <div style="font-size:12px; font-weight:600; color:var(--zima-text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px;">Resolvidas pela IA</div>
           <div style="display:flex; align-items:center; gap:12px;">
             <svg viewBox="0 0 36 36" style="width:64px;height:64px;flex-shrink:0;">
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(16,185,129,0.12)" stroke-width="3"/>
@@ -940,6 +947,16 @@ cx="18" cy="18" r="15.9" fill="none" :stroke="dashboard.aiResolutionRate >= 70 ?
             </div>
           </div>
           <div style="display:flex; gap:6px; margin-top:12px; padding-top:12px; border-top:1px solid rgba(148,163,184,0.06);">
+            <ZimaButton
+              v-if="auto.active"
+              size="sm"
+              variant="secondary"
+              :loading="runningAutomationId === auto.id"
+              @click="runAutomationNow(auto)"
+            >
+              <template #icon-left><Icon name="i-lucide-play" style="width:12px;height:12px;" /></template>
+              Executar agora
+            </ZimaButton>
             <ZimaButton size="sm" variant="ghost" @click="openEditAuto(auto)">Editar</ZimaButton>
             <ZimaButton size="sm" variant="ghost" @click="autoHistoryId = auto.id">Ver histórico</ZimaButton>
             <ZimaButton size="sm" variant="ghost" @click="toggleAutomation(auto.id)">

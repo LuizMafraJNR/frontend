@@ -305,6 +305,42 @@ const handleSaveDraft = () => {
   activeTab.value = 'rascunhos'
 }
 
+// ── Duplicar campanha (clona como novo rascunho) ──────────────────────────────
+const duplicateCampaign = (camp: Campaign) => {
+  addCampaign({
+    name: `${camp.name} (cópia)`,
+    type: camp.type,
+    channel: camp.channel,
+    status: 'draft',
+    audienceSize: camp.audienceSize,
+    scheduledAt: null,
+    sentAt: null,
+    message: camp.message,
+    couponCode: camp.couponCode ?? null,
+    segmentRules: [...(camp.segmentRules ?? [])],
+    allClients: camp.allClients,
+  })
+  toast.success('Campanha duplicada', 'Uma cópia foi criada em Rascunhos.')
+  activeTab.value = 'rascunhos'
+}
+
+// ── Excluir campanha (com confirmação) ────────────────────────────────────────
+const deleteModalOpen = ref(false)
+const deleteCampaignId = ref<string | null>(null)
+const deleteCampaignName = ref('')
+const askDeleteCampaign = (camp: Campaign) => {
+  deleteCampaignId.value = camp.id
+  deleteCampaignName.value = camp.name
+  deleteModalOpen.value = true
+}
+const confirmDeleteCampaign = () => {
+  if (deleteCampaignId.value) {
+    deleteCampaign(deleteCampaignId.value)
+    toast.success('Campanha excluída')
+  }
+  deleteModalOpen.value = false
+}
+
 const resetForm = () => {
   currentStep.value = 'config'
   Object.assign(form, {
@@ -325,32 +361,23 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
 <template>
   <div>
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <h1 style="font-size:24px;font-weight:700;color:var(--zima-text-primary);margin:0;">Campanhas</h1>
-      <ZimaButton @click="newCampaignOpen = true">
-        <template #icon-left><Icon name="i-lucide-plus" style="width:14px;height:14px;" /></template>
-        Nova Campanha
-      </ZimaButton>
-    </div>
-
-    <!-- Tabs -->
-    <div style="display:flex; gap:0; border-bottom:1px solid var(--zima-border-divider); margin-bottom:24px;">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        style="padding:10px 20px; background:none; border:none; cursor:pointer; font-size:14px; font-weight:500; border-bottom:2px solid transparent; transition:all 150ms; margin-bottom:-1px;"
-        :style="{
-          color: activeTab === tab.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
-          borderBottomColor: activeTab === tab.key ? 'var(--zima-blue-core)' : 'transparent',
-        }"
-        @click="activeTab = tab.key"
-      >
-        {{ tab.label }}
-        <span v-if="campaigns.filter(c => tabStatusMap[tab.key].includes(c.status)).length" style="margin-left:6px;font-size:11px;background:rgba(148,163,184,0.1);border-radius:10px;padding:1px 6px;color:var(--zima-text-muted);">
-          {{ campaigns.filter(c => tabStatusMap[tab.key].includes(c.status)).length }}
-        </span>
-      </button>
-    </div>
+    <ZimaPageHeader title="Campanhas" description="Gerencie suas campanhas de marketing e comunicação">
+      <template #actions>
+        <ZimaButton @click="newCampaignOpen = true">
+          <template #icon-left><Icon name="i-lucide-plus" style="width:14px;height:14px;" /></template>
+          Nova Campanha
+        </ZimaButton>
+      </template>
+      <template #tabs>
+        <ZimaSubTabs
+          v-model="activeTab"
+          :tabs="tabs.map(t => ({
+            ...t,
+            count: campaigns.filter(c => tabStatusMap[t.key].includes(c.status)).length || undefined,
+          }))"
+        />
+      </template>
+    </ZimaPageHeader>
 
     <!-- Table -->
     <ZimaTable
@@ -413,7 +440,10 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
           <ZimaButton v-if="row.status === 'scheduled' || row.status === 'draft'" size="sm" variant="ghost" @click="editScheduledCampaign(row as Campaign)">
             <Icon name="i-lucide-pencil" style="width:13px;height:13px;" />
           </ZimaButton>
-          <ZimaButton size="sm" variant="ghost" @click="deleteCampaign(row.id)">
+          <ZimaButton size="sm" variant="ghost" title="Duplicar" @click="duplicateCampaign(row as Campaign)">
+            <Icon name="i-lucide-copy" style="width:13px;height:13px;" />
+          </ZimaButton>
+          <ZimaButton size="sm" variant="ghost" title="Excluir" @click="askDeleteCampaign(row as Campaign)">
             <Icon name="i-lucide-trash-2" style="width:13px;height:13px;color:var(--zima-danger);" />
           </ZimaButton>
         </div>
@@ -691,6 +721,17 @@ watch(newCampaignOpen, v => { if (!v) resetForm() })
       </div>
       <template #footer="{ close }">
         <ZimaButton variant="ghost" @click="close">Fechar</ZimaButton>
+      </template>
+    </ZimaModal>
+
+    <!-- Modal: confirmar exclusão de campanha -->
+    <ZimaModal v-model="deleteModalOpen" title="Excluir campanha" size="sm">
+      <p style="font-size: 14px; color: var(--zima-text-secondary); line-height: 1.5;">
+        Excluir a campanha <strong style="color: var(--zima-text-primary);">{{ deleteCampaignName }}</strong>? Esta ação não pode ser desfeita.
+      </p>
+      <template #footer>
+        <ZimaButton variant="ghost" @click="deleteModalOpen = false">Cancelar</ZimaButton>
+        <ZimaButton variant="danger" @click="confirmDeleteCampaign">Excluir</ZimaButton>
       </template>
     </ZimaModal>
   </div>

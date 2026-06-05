@@ -39,16 +39,19 @@ const MOCK_SERVICES: Service[] = [
   { id: 'svc-8', categoryId: 'cat-3', name: 'Hidratação Facial', duration: 45, price: 90, commissionRate: 40, active: true, order: 2 },
 ]
 
-export const useServices = () => {
-  const categories = ref<ServiceCategory[]>([])
-  const services = ref<Service[]>([])
-  const loading = ref(false)
+// ── Estado singleton (persistido — SSR-safe) ────────────────────────────────────
+const categories = persistedRef<ServiceCategory[]>('services:categories', () => MOCK_CATEGORIES.map(c => ({ ...c })))
+const services = persistedRef<Service[]>('services:list', () => MOCK_SERVICES.map(s => ({ ...s })))
+const loading = ref(false)
+const initialized = ref(false)
 
+export const useServices = () => {
   const fetchAll = async () => {
+    if (initialized.value) return
     loading.value = true
     await new Promise(r => setTimeout(r, 400))
-    categories.value = [...MOCK_CATEGORIES]
-    services.value = [...MOCK_SERVICES]
+    // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
+    initialized.value = true
     loading.value = false
   }
 

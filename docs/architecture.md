@@ -70,7 +70,7 @@ layers/saas/
 │   └── saas.vue                ← layout principal: sidebar + topbar + slot
 ├── components/
 │   └── zima/                   ← prefixo "Zima" — 21 componentes auto-importados
-├── composables/                ← 12 composables de domínio
+├── composables/                ← composables de domínio + infra
 │   ├── useAI.ts
 │   ├── useAppointments.ts
 │   ├── useCampaigns.ts
@@ -80,9 +80,13 @@ layers/saas/
 │   ├── useInbox.ts
 │   ├── useInventory.ts
 │   ├── useProfessionals.ts
+│   ├── useReports.ts
 │   ├── useSaasLayout.ts
 │   ├── useServices.ts
-│   └── useZimaToast.ts
+│   ├── useZimaToast.ts
+│   ├── useMockPersistence.ts    ← persistência SSR-safe (persistedRef)
+│   ├── useDomainEvents.ts       ← barramento de eventos de domínio
+│   └── useNotifications.ts      ← centro de notificações da topbar
 └── pages/
     └── saas/                   ← 16 telas + modais/drawers extraídos
 ```
@@ -114,6 +118,16 @@ export const useCustomers = () => {
 ```
 
 **Por que não Pinia:** os módulos SaaS são todos mock com dados estáticos; a transição para API real será feita introduzindo repositories e stores Pinia apenas quando necessário, sem refatorar os composables existentes.
+
+### Backbone: persistência + integrações cruzadas
+
+Os singletons de domínio do SaaS **persistem no `localStorage`** (SSR-safe) e os módulos se
+**integram entre si** (uma venda no PDV alimenta Financeiro + Estoque + Comissões). Há um
+**barramento de eventos** (`useDomainEvents`) para efeitos efêmeros (notificações) e um
+**centro de notificações** (`useNotifications`) ligado ao sino da topbar.
+
+> Detalhes completos, regras de migração e a regra "mutação autoritativa = chamada direta /
+> bus = só efeito efêmero" em **[docs/screens/00-integracoes.md](screens/00-integracoes.md)**.
 
 ### Layout `saas.vue`
 

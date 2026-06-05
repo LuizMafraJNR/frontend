@@ -196,6 +196,27 @@ const toggleMemberStatus = (member: TeamMember) => {
   toast.success(member.status === 'active' ? 'Membro reativado' : 'Membro desativado')
 }
 
+// ── Editar função do membro ───────────────────────────────────────────────────
+const editRoleModalOpen = ref(false)
+const editRoleMemberId = ref<string | null>(null)
+const editRoleValue = ref<string | null>(null)
+const editRoleMember = computed(() => teamMembers.value.find(m => m.id === editRoleMemberId.value) ?? null)
+
+const openEditRole = (member: TeamMember) => {
+  editRoleMemberId.value = member.id
+  editRoleValue.value = member.role
+  editRoleModalOpen.value = true
+  openMemberMenu.value = null
+}
+
+const confirmEditRole = () => {
+  const m = editRoleMember.value
+  if (!m || !editRoleValue.value) return
+  m.role = editRoleValue.value as TeamMember['role']
+  editRoleModalOpen.value = false
+  toast.success(`Função de ${m.name} alterada para ${roleLabels[m.role]}`)
+}
+
 // Tabela de permissões por role
 const PERMISSION_MODULES = ['Agenda', 'Clientes', 'Financeiro', 'Relatórios', 'Configurações']
 
@@ -356,46 +377,84 @@ const invoices = [
   { id: 'inv-4', date: '05/01/2026', amount: 'R$ 149,90', status: 'Pago' },
 ]
 
+// ── Planos / Upgrade ──────────────────────────────────────────────────────────
+const plansModalOpen = ref(false)
+interface Plan { key: string; name: string; price: string; features: string[]; current?: boolean; highlight?: boolean }
+const plans: Plan[] = [
+  { key: 'starter', name: 'Starter', price: 'R$ 79,90/mês', features: ['1 unidade', 'Até 3 profissionais', 'Agenda + Clientes', 'PDV básico'] },
+  { key: 'pro', name: 'Profissional', price: 'R$ 149,90/mês', features: ['1 unidade', 'Profissionais ilimitados', 'Financeiro + DRE', 'IA & Campanhas', 'Notas fiscais'], current: true, highlight: true },
+  { key: 'enterprise', name: 'Enterprise', price: 'R$ 299,90/mês', features: ['Multi-unidade', 'Tudo do Profissional', 'Relatórios avançados', 'Suporte prioritário', 'API'] },
+]
+const selectingPlan = ref<string | null>(null)
+const choosePlan = async (plan: Plan) => {
+  if (plan.current) { toast.info('Este já é o seu plano atual'); return }
+  selectingPlan.value = plan.key
+  await new Promise(r => setTimeout(r, 700))
+  selectingPlan.value = null
+  plansModalOpen.value = false
+  toast.success(`Plano ${plan.name} selecionado`, 'Nossa equipe entrará em contato para concluir a alteração.')
+}
+
+// ── Resetar dados de demonstração ─────────────────────────────────────────────
+const resetModalOpen = ref(false)
+const resetting = ref(false)
+const confirmResetData = async () => {
+  resetting.value = true
+  resetMockData()
+  await new Promise(r => setTimeout(r, 300))
+  resetting.value = false
+  resetModalOpen.value = false
+  toast.success('Dados de demonstração restaurados', 'Recarregue a página para ver o estado inicial.')
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const formatRole = (role: string) => roleLabels[role] ?? role
 </script>
 
 <template>
-  <!-- TODO: i18n -->
-  <div class="flex flex-col lg:flex-row gap-6" style="min-height: calc(100vh - var(--zima-topbar-height) - 48px);">
+  <div>
+    <ZimaPageHeader title="Configurações" description="Personalize seu negócio, equipe e integrações" />
+
+    <div class="flex flex-col lg:flex-row gap-6" style="margin-top: var(--zima-section-gap);">
 
     <!-- Sub-nav: vertical em lg+, scroll horizontal em mobile/tablet -->
     <aside class="flex-shrink-0 lg:w-[220px] lg:sticky lg:top-6 lg:self-start">
-      <div
-        class="hidden lg:block"
-        style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--zima-text-muted); text-transform: uppercase; margin-bottom: 8px; padding: 0 8px;"
-      >
-        Configurações
-      </div>
-      <div class="flex lg:flex-col gap-1 overflow-x-auto hide-scrollbar" style="border-bottom: 1px solid var(--zima-border-divider); padding-bottom: 8px;">
+      <div class="flex lg:flex-col gap-1 overflow-x-auto hide-scrollbar pb-2 lg:pb-0">
         <button
           v-for="section in sections"
           :key="section.key"
-          class="flex items-center gap-3 text-left rounded-lg transition-all whitespace-nowrap"
+          class="flex items-center gap-2.5 text-left rounded-lg transition-all whitespace-nowrap border"
           :style="{
-            padding: '8px 12px',
-            fontSize: '14px',
+            padding: '8px 10px',
+            fontSize: '13px',
             fontWeight: activeSection === section.key ? '500' : '400',
-            color: activeSection === section.key ? 'var(--zima-blue-core)' : 'var(--zima-text-secondary)',
-            background: activeSection === section.key ? 'rgba(59,130,246,0.1)' : 'transparent',
-            border: 'none',
+            color: activeSection === section.key ? 'var(--zima-blue-light)' : 'var(--zima-text-secondary)',
+            background: activeSection === section.key ? 'var(--zima-blue-subtle)' : 'transparent',
+            borderColor: activeSection === section.key ? 'var(--zima-border-active)' : 'transparent',
             cursor: 'pointer',
             flexShrink: '0',
           }"
           @click="activeSection = section.key"
+          @mouseenter="(e: MouseEvent) => {
+            if (activeSection !== section.key) {
+              (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-hover)'
+              ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'
+            }
+          }"
+          @mouseleave="(e: MouseEvent) => {
+            if (activeSection !== section.key) {
+              (e.currentTarget as HTMLElement).style.background = 'transparent'
+              ;(e.currentTarget as HTMLElement).style.borderColor = 'transparent'
+            }
+          }"
         >
           <Icon
             :name="section.icon"
             :style="{
-              width: '16px',
-              height: '16px',
+              width: '15px',
+              height: '15px',
               flexShrink: '0',
-              color: activeSection === section.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
+              color: activeSection === section.key ? 'var(--zima-blue-light)' : 'var(--zima-text-muted)',
             }"
           />
           {{ section.label }}
@@ -409,10 +468,10 @@ const formatRole = (role: string) => roleLabels[role] ?? role
       <!-- ═══════════════════════════════ DADOS DO NEGÓCIO ═══════════════════════════════ -->
       <template v-if="activeSection === 'negocio'">
         <div>
-          <h1 style="font-size: 22px; font-weight: 600; color: var(--zima-text-primary); margin: 0 0 4px;">
+          <h1 class="zima-settings-section-title">
             Dados do Negócio
           </h1>
-          <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">
+          <p class="zima-settings-section-desc">
             Informações públicas e de contato do seu estabelecimento.
           </p>
         </div>
@@ -614,10 +673,10 @@ const formatRole = (role: string) => roleLabels[role] ?? role
       <!-- ═══════════════════════════════ HORÁRIO ═══════════════════════════════ -->
       <template v-if="activeSection === 'horario'">
         <div>
-          <h1 style="font-size: 22px; font-weight: 600; color: var(--zima-text-primary); margin: 0 0 4px;">
+          <h1 class="zima-settings-section-title">
             Horário de Funcionamento
           </h1>
-          <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">
+          <p class="zima-settings-section-desc">
             Configure os dias e horários em que seu estabelecimento atende.
           </p>
         </div>
@@ -678,10 +737,10 @@ const formatRole = (role: string) => roleLabels[role] ?? role
       <!-- ═══════════════════════════════ PERMISSÕES ═══════════════════════════════ -->
       <template v-if="activeSection === 'permissoes'">
         <div>
-          <h1 style="font-size: 22px; font-weight: 600; color: var(--zima-text-primary); margin: 0 0 4px;">
+          <h1 class="zima-settings-section-title">
             Equipe e Permissões
           </h1>
-          <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">
+          <p class="zima-settings-section-desc">
             Gerencie os membros da equipe e seus níveis de acesso.
           </p>
         </div>
@@ -785,7 +844,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
               >
                 <button
                   style="width: 100%; text-align: left; padding: 7px 10px; background: transparent; border: none; border-radius: 4px; font-size: 13px; color: var(--zima-text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px;"
-                  @click="toast.info('Editar função em breve'); openMemberMenu = null"
+                  @click="openEditRole(member)"
                 >
                   <Icon name="i-lucide-pencil" style="width: 13px; height: 13px;" />
                   Editar função
@@ -871,10 +930,10 @@ const formatRole = (role: string) => roleLabels[role] ?? role
       <!-- ═══════════════════════════════ NOTIFICAÇÕES ═══════════════════════════════ -->
       <template v-if="activeSection === 'notificacoes'">
         <div>
-          <h1 style="font-size: 22px; font-weight: 600; color: var(--zima-text-primary); margin: 0 0 4px;">
+          <h1 class="zima-settings-section-title">
             Notificações
           </h1>
-          <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">
+          <p class="zima-settings-section-desc">
             Configure como e quando enviar notificações para você e seus clientes.
           </p>
         </div>
@@ -978,10 +1037,10 @@ const formatRole = (role: string) => roleLabels[role] ?? role
       <!-- ═══════════════════════════════ INTEGRAÇÕES ═══════════════════════════════ -->
       <template v-if="activeSection === 'integracoes'">
         <div>
-          <h1 style="font-size: 22px; font-weight: 600; color: var(--zima-text-primary); margin: 0 0 4px;">
+          <h1 class="zima-settings-section-title">
             Integrações
           </h1>
-          <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">
+          <p class="zima-settings-section-desc">
             Conecte ferramentas externas para automatizar o seu negócio.
           </p>
         </div>
@@ -1041,10 +1100,10 @@ const formatRole = (role: string) => roleLabels[role] ?? role
       <!-- ═══════════════════════════════ PLANO ═══════════════════════════════ -->
       <template v-if="activeSection === 'plano'">
         <div>
-          <h1 style="font-size: 22px; font-weight: 600; color: var(--zima-text-primary); margin: 0 0 4px;">
+          <h1 class="zima-settings-section-title">
             Plano e Faturamento
           </h1>
-          <p style="font-size: 14px; color: var(--zima-text-muted); margin: 0;">
+          <p class="zima-settings-section-desc">
             Gerencie sua assinatura e visualize seu histórico de pagamentos.
           </p>
         </div>
@@ -1063,7 +1122,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
                 <ZimaBadge variant="blue">Ativo</ZimaBadge>
               </div>
               <div style="margin-top: 4px; font-size: 14px; color: var(--zima-text-muted);">
-                <span style="font-size: 20px; font-weight: 600; color: var(--zima-blue-core); font-family: 'Geist Mono', monospace;">
+                <span style="font-size: 20px; font-weight: 600; color: var(--zima-blue-core); font-family: var(--zima-font-mono);">
                   {{ currentPlan.price }}
                 </span>
                 /{{ currentPlan.period }} · Renova em {{ currentPlan.renewDate }}
@@ -1100,7 +1159,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
             <div v-for="item in planUsage" :key="item.label">
               <div class="flex items-center justify-between" style="margin-bottom: 6px;">
                 <span style="font-size: 14px; font-weight: 500; color: var(--zima-text-primary);">{{ item.label }}</span>
-                <span style="font-size: 13px; font-family: 'Geist Mono', monospace; color: var(--zima-text-muted);">
+                <span style="font-size: 13px; font-family: var(--zima-font-mono); color: var(--zima-text-muted);">
                   <template v-if="item.limit">
                     {{ item.used }} / {{ item.limit }}
                   </template>
@@ -1127,7 +1186,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
             </div>
           </div>
           <div class="flex justify-end" style="margin-top: 16px;">
-            <ZimaButton @click="toast.info('Página de planos em breve')">
+            <ZimaButton @click="plansModalOpen = true">
               <template #icon-left>
                 <Icon name="i-lucide-zap" style="width: 14px; height: 14px;" />
               </template>
@@ -1190,7 +1249,7 @@ const formatRole = (role: string) => roleLabels[role] ?? role
               <span style="font-size: 13px; color: var(--zima-text-muted); margin-left: 8px;">{{ inv.date }}</span>
             </div>
             <div class="flex items-center gap-4">
-              <span style="font-size: 14px; font-family: 'Geist Mono', monospace; color: var(--zima-text-primary);">{{ inv.amount }}</span>
+              <span style="font-size: 14px; font-family: var(--zima-font-mono); color: var(--zima-text-primary);">{{ inv.amount }}</span>
               <ZimaBadge variant="success">{{ inv.status }}</ZimaBadge>
               <ZimaButton variant="ghost" size="sm">
                 <template #icon-left>
@@ -1216,9 +1275,83 @@ const formatRole = (role: string) => roleLabels[role] ?? role
               Cancelar Assinatura
             </ZimaButton>
           </div>
+          <div style="height: 1px; background: var(--zima-border-divider); margin: 16px 0;" />
+          <div class="flex items-center justify-between">
+            <div>
+              <div style="font-size: 14px; font-weight: 500; color: var(--zima-text-primary);">Resetar dados de demonstração</div>
+              <div style="font-size: 13px; color: var(--zima-text-muted);">Restaura todos os dados mock (clientes, agenda, financeiro, estoque...) ao estado inicial.</div>
+            </div>
+            <ZimaButton variant="ghost" style="color: var(--zima-warning);" @click="resetModalOpen = true">
+              <template #icon-left><Icon name="i-lucide-rotate-ccw" style="width: 13px; height: 13px;" /></template>
+              Resetar dados
+            </ZimaButton>
+          </div>
         </ZimaCard>
       </template>
 
     </div>
+  </div>
+
+  <!-- Modal: editar função do membro -->
+  <ZimaModal v-model="editRoleModalOpen" title="Editar função" size="sm">
+    <div v-if="editRoleMember" class="flex flex-col gap-3">
+      <p style="font-size: 13px; color: var(--zima-text-muted);">
+        Alterar a função de <strong style="color: var(--zima-text-primary);">{{ editRoleMember.name }}</strong>.
+      </p>
+      <ZimaSelect v-model="editRoleValue" label="Função" :options="roleOptions" />
+    </div>
+    <template #footer>
+      <ZimaButton variant="ghost" @click="editRoleModalOpen = false">Cancelar</ZimaButton>
+      <ZimaButton variant="primary" @click="confirmEditRole">Salvar</ZimaButton>
+    </template>
+  </ZimaModal>
+
+  <!-- Modal: planos -->
+  <ZimaModal v-model="plansModalOpen" title="Escolha seu plano" size="lg">
+    <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+      <div
+        v-for="plan in plans"
+        :key="plan.key"
+        :style="{
+          padding: '16px', borderRadius: 'var(--zima-radius-lg)',
+          border: plan.highlight ? '1px solid var(--zima-blue-core)' : '1px solid var(--zima-border-default)',
+          background: plan.highlight ? 'var(--zima-blue-subtle)' : 'var(--zima-bg-surface-2)',
+          display: 'flex', flexDirection: 'column', gap: '10px',
+        }"
+      >
+        <div class="flex items-center justify-between">
+          <span style="font-size: 15px; font-weight: 600; color: var(--zima-text-primary);">{{ plan.name }}</span>
+          <ZimaBadge v-if="plan.current" variant="blue" size="sm">Atual</ZimaBadge>
+        </div>
+        <div style="font-family: var(--zima-font-mono); font-size: 18px; font-weight: 700; color: var(--zima-text-primary);">{{ plan.price }}</div>
+        <ul style="display: flex; flex-direction: column; gap: 6px; margin: 4px 0; padding: 0; list-style: none;">
+          <li v-for="f in plan.features" :key="f" style="font-size: 12px; color: var(--zima-text-secondary); display: flex; align-items: center; gap: 6px;">
+            <Icon name="i-lucide-check" style="width: 12px; height: 12px; color: var(--zima-success);" />
+            {{ f }}
+          </li>
+        </ul>
+        <ZimaButton
+          :variant="plan.highlight ? 'primary' : 'secondary'"
+          size="sm"
+          :loading="selectingPlan === plan.key"
+          :disabled="plan.current"
+          @click="choosePlan(plan)"
+        >
+          {{ plan.current ? 'Plano atual' : 'Escolher' }}
+        </ZimaButton>
+      </div>
+    </div>
+  </ZimaModal>
+
+  <!-- Modal: resetar dados -->
+  <ZimaModal v-model="resetModalOpen" title="Resetar dados de demonstração" size="sm">
+    <p style="font-size: 14px; color: var(--zima-text-secondary); line-height: 1.5;">
+      Isso restaura todos os dados mock ao estado inicial e descarta as alterações feitas nesta demonstração. Deseja continuar?
+    </p>
+    <template #footer>
+      <ZimaButton variant="ghost" @click="resetModalOpen = false">Cancelar</ZimaButton>
+      <ZimaButton variant="danger" :loading="resetting" @click="confirmResetData">Resetar tudo</ZimaButton>
+    </template>
+  </ZimaModal>
   </div>
 </template>

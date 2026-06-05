@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **REGRA CRÍTICA — NUNCA IGNORAR**
 > A cada mudança (nova feature, correção, refactor, novo componente, novo token):
 > **verificar se algum `docs/*.md` precisa ser atualizado.**
-> Arquitetura mudou? → `docs/architecture.md` | Novo componente? → `docs/components.md`
-> Novo token? → `docs/design-tokens.md` | Teste adicionado? → `docs/testing.md`
+> Arquitetura mudou? → `docs/architecture.md` | Novo componente? → `docs/components.md` + `docs/design-system.md`
+> Novo token? → `docs/design-tokens.md` + `docs/design-system.md` | Teste adicionado? → `docs/testing.md`
 > Novo idioma? → `docs/i18n.md` | Otimização de performance? → `docs/performance.md`
-> Nova tela SaaS? → `docs/screens/XX-nome.md`
+> Nova tela SaaS? → `docs/screens/XX-nome.md` | Nova regra de design? → `docs/design-system.md`
 
 ---
 
@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Tópico | Documento |
 |---|---|
+| **Design System completo (tokens + componentes + padrões)** | **[docs/design-system.md](docs/design-system.md)** |
 | Arquitetura de layers, patterns, dependências | [docs/architecture.md](docs/architecture.md) |
 | Padrões de componentes + Zima Blue | [docs/components.md](docs/components.md) |
 | Design tokens (cores, espaçamento, fontes) | [docs/design-tokens.md](docs/design-tokens.md) |
@@ -53,6 +54,11 @@ npm run lint:fix         # ESLint com auto-fix
 1. **Repository Pattern** — toda chamada HTTP via `create*Repository($fetch)`. Nunca `$fetch` em componentes
 2. **Composable Pattern** — business logic em `useXxx()`. Componente chama composable, nunca repository/store direto
 3. **i18n** — todo texto visível ao usuário via `t('chave')`. Sem strings hardcoded em templates *(exceção: layer saas usa strings diretas no mock — adicionar i18n ao conectar API real)*
+   - Arquivos reais lidos em runtime: **`i18n/locales/pt-BR.json`** e **`i18n/locales/en.json`**
+   - ⚠️ Os arquivos `i18n/pt-BR.json` e `i18n/en.json` (raiz) são **ignorados** pelo runtime — nunca editar esses
+   - Ao criar ou atualizar uma tela, adicionar as chaves nos **dois** arquivos `locales/` antes do merge
+   - Nomenclatura de namespace: `landing.*` para a landing page · `saas.*` para telas do SaaS (quando i18n for conectado)
+   - Ver checklist completo em [docs/i18n.md#checklist-para-nova-tela--novo-componente](docs/i18n.md)
 4. **Imagens** — sempre `<NuxtImg>` ou `<NuxtPicture>`, nunca `<img>`
 5. **Stories** — todo componente base precisa de `.stories.ts` antes de ser mergeado
 

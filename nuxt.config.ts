@@ -12,6 +12,7 @@ export default defineNuxtConfig({
   extends: [
     './layers/core',
     './layers/ui',
+    './layers/landing',   // Landing page pública (pré-renderizada)
     './layers/saas',      // Design System Zima Blue — SaaS de gestão
     './layers/auth',
     './layers/patients',
@@ -46,6 +47,10 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
     server: {
       allowedHosts: true,
+      watch: {
+        // Força Vite a observar mudanças nas layers para o Tailwind JIT regenerar as classes zima-*
+        ignored: ['!**/layers/**'],
+      },
     },
   },
 
@@ -66,13 +71,14 @@ export default defineNuxtConfig({
       { code: 'en', language: 'en-US', file: 'en.json', name: 'English' },
     ],
     defaultLocale: 'pt-BR',
-    lazy: true,
-    // langDir é relativo a i18nDir (raiz/i18n/). Default: 'locales' → raiz/i18n/locales/
+    lazy: false,
+    langDir: 'locales', // arquivos lidos de i18n/locales/ — NÃO editar i18n/*.json (esses são ignorados)
     strategy: 'prefix_except_default',
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_redirected',
       redirectOn: 'root',
+      fallbackLocale: 'pt-BR',
     },
   },
 
@@ -109,7 +115,8 @@ export default defineNuxtConfig({
 
   // Route rules de performance
   routeRules: {
-    '/': { redirect: '/saas' },
+    '/': { prerender: true },      // Landing pré-renderizada (HTML estático, melhor PageSpeed)
+    '/en': { prerender: true },    // Versão EN pré-renderizada
     '/login': { ssr: true },
     '/register': { ssr: true },
     '/pacientes/**': { ssr: true },
@@ -121,16 +128,20 @@ export default defineNuxtConfig({
   // Head padrão
   app: {
     head: {
-      title: 'IMAI',
+      title: 'Zima — Gestão completa para salões, clínicas e cuidados',
       htmlAttrs: { lang: 'pt-BR' },
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'IMAI — Plataforma de gestão inteligente' },
+        { name: 'description', content: 'Agenda, clientes, financeiro, estoque, nota fiscal, IA para atendimento e campanhas — para salões, clínicas de estética, petshops e estúdios. Feito em Joinville, SC.' },
+        { name: 'theme-color', content: '#3B82F6' },
+        { property: 'og:site_name', content: 'Zima' },
+        { property: 'og:type', content: 'website' },
+        { name: 'twitter:card', content: 'summary_large_image' },
       ],
       link: [
-        // Favicon polvo via SVG emoji (suportado em todos os browsers modernos)
-        { rel: 'icon', type: 'image/svg+xml', href: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐙</text></svg>' },
+        { rel: 'icon', type: 'image/png', href: '/logo-capa-com-fundo.png' },
+        { rel: 'manifest', href: '/manifest.json' },
       ],
     },
     pageTransition: { name: 'page', mode: 'out-in' },

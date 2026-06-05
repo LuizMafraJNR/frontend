@@ -12,7 +12,7 @@ const route = useRoute()
 const customerId = route.params.id as string
 const toast = useZimaToast()
 
-const { customers, loading: customersLoading, fetchAll: fetchCustomers, updateCustomer, getById } = useCustomers()
+const { customers, loading: customersLoading, fetchAll: fetchCustomers, updateCustomer, getById, computeCustomerStatus } = useCustomers()
 const { appointments, fetchAll: fetchAppointments } = useAppointments()
 
 onMounted(async () => {
@@ -21,6 +21,8 @@ onMounted(async () => {
 })
 
 const customer = computed<Customer | undefined>(() => getById(customerId))
+// Status derivado das métricas — consistente com a lista de clientes.
+const customerStatus = computed(() => (customer.value ? computeCustomerStatus(customer.value) : 'ACTIVE'))
 
 // Tabs
 const activeTab = ref('historico')
@@ -214,8 +216,8 @@ const saveNotesDirect = async () => {
                 {{ getInitials(customer.name) }}
               </div>
               <div class="flex flex-col items-center gap-1.5">
-                <ZimaBadge :variant="CUSTOMER_STATUS[customer.status].variant">
-                  {{ CUSTOMER_STATUS[customer.status].label }}
+                <ZimaBadge :variant="CUSTOMER_STATUS[customerStatus].variant">
+                  {{ CUSTOMER_STATUS[customerStatus].label }}
                 </ZimaBadge>
                 <h2 style="font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ customer.name }}</h2>
               </div>
@@ -237,15 +239,15 @@ const saveNotesDirect = async () => {
             <!-- KPIs -->
             <div class="grid grid-cols-3 gap-3">
               <div class="flex flex-col items-center gap-0.5">
-                <span style="font-size: 20px; font-weight: 700; color: var(--zima-text-primary); font-family: 'Geist Mono', monospace;">{{ customer.visits }}</span>
+                <span style="font-size: 20px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">{{ customer.visits }}</span>
                 <span style="font-size: 11px; color: var(--zima-text-muted);">Visitas</span>
               </div>
               <div class="flex flex-col items-center gap-0.5">
-                <span style="font-size: 15px; font-weight: 700; color: var(--zima-text-primary); font-family: 'Geist Mono', monospace;">{{ formatCurrency(customer.totalSpent).replace('R$\xa0', '') }}</span>
+                <span style="font-size: 15px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">{{ formatCurrency(customer.totalSpent).replace('R$\xa0', '') }}</span>
                 <span style="font-size: 11px; color: var(--zima-text-muted);">Total Gasto</span>
               </div>
               <div class="flex flex-col items-center gap-0.5">
-                <span style="font-size: 20px; font-weight: 700; color: var(--zima-text-primary); font-family: 'Geist Mono', monospace;">{{ customer.loyaltyPoints }}</span>
+                <span style="font-size: 20px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">{{ customer.loyaltyPoints }}</span>
                 <span style="font-size: 11px; color: var(--zima-text-muted);">Pontos</span>
               </div>
             </div>
@@ -337,7 +339,7 @@ const saveNotesDirect = async () => {
                 </div>
               </template>
               <template #cell-valor="{ row }">
-                <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; color: var(--zima-text-primary);">
+                <span style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 500; color: var(--zima-text-primary);">
                   {{ formatCurrency(row.valor as number) }}
                 </span>
               </template>
@@ -356,7 +358,7 @@ const saveNotesDirect = async () => {
             <ZimaCard padding="md">
               <div class="flex flex-col gap-1">
                 <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); font-weight: 600;">Total Gasto</span>
-                <span style="font-size: 22px; font-weight: 700; color: var(--zima-text-primary); font-family: 'Geist Mono', monospace;">
+                <span style="font-size: 22px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">
                   {{ formatCurrency(customer.totalSpent) }}
                 </span>
               </div>
@@ -364,7 +366,7 @@ const saveNotesDirect = async () => {
             <ZimaCard padding="md">
               <div class="flex flex-col gap-1">
                 <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); font-weight: 600;">Ticket Médio</span>
-                <span style="font-size: 22px; font-weight: 700; color: var(--zima-text-primary); font-family: 'Geist Mono', monospace;">
+                <span style="font-size: 22px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">
                   {{ formatCurrency(ticketMedio) }}
                 </span>
               </div>
@@ -387,7 +389,7 @@ const saveNotesDirect = async () => {
               empty-description="Nenhum atendimento concluído ainda"
             >
               <template #cell-valor="{ row }">
-                <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; color: var(--zima-success);">
+                <span style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 500; color: var(--zima-success);">
                   {{ formatCurrency(row.valor as number) }}
                 </span>
               </template>

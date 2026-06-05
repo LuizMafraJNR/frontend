@@ -273,16 +273,21 @@ const buildAppointments = (): Appointment[] => {
   ]
 }
 
+// ─── Estado singleton (persistido — SSR-safe) ───────────────────────────────
+
+const appointments = persistedRef<Appointment[]>('appointments:list', () => buildAppointments())
+const loading = ref(false)
+const initialized = ref(false)
+
 // ─── Composable ─────────────────────────────────────────────────────────────
 
 export const useAppointments = () => {
-  const appointments = ref<Appointment[]>([])
-  const loading = ref(false)
-
   const fetchAll = async () => {
+    if (initialized.value) return
     loading.value = true
     await new Promise(r => setTimeout(r, 400))
-    appointments.value = buildAppointments()
+    // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
+    initialized.value = true
     loading.value = false
   }
 

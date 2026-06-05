@@ -87,7 +87,23 @@ const cardStyle = computed((): Record<string, string> => {
     @click="clickable && emit('click', $event)"
     @keydown.enter="clickable && emit('click', $event as unknown as MouseEvent)"
   >
-    <slot name="header" />
+    <!-- Header: suporta slot simples ou padrão título+ação -->
+    <template v-if="$slots.header || $slots['header-actions']">
+      <div
+        v-if="$slots['header-actions']"
+        class="flex items-center justify-between"
+        :style="{
+          minHeight: 'var(--zima-card-header-h)',
+          padding: padding !== 'none' ? '0 20px' : '0',
+          borderBottom: '1px solid var(--zima-border-divider)',
+          marginBottom: padding !== 'none' ? '0' : '0',
+        }"
+      >
+        <slot name="header" />
+        <slot name="header-actions" />
+      </div>
+      <slot v-else name="header" />
+    </template>
     <slot />
     <slot name="footer" />
   </component>

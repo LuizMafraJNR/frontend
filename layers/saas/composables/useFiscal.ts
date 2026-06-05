@@ -360,8 +360,8 @@ const MOCK_DOCUMENTS: FiscalDocument[] = [
 
 // ── Estado singleton ──────────────────────────────────────────────────────────
 
-const documents = ref<FiscalDocument[]>([])
-const config = ref<FiscalConfig>({ ...MOCK_CONFIG })
+const documents = persistedRef<FiscalDocument[]>('fiscal:documents', () => MOCK_DOCUMENTS.map(d => ({ ...d })))
+const config = persistedRef<FiscalConfig>('fiscal:config', () => ({ ...MOCK_CONFIG }))
 const loading = ref(false)
 const initialized = ref(false)
 
@@ -371,7 +371,7 @@ async function fetchAll(): Promise<void> {
   if (initialized.value) return
   loading.value = true
   await new Promise(r => setTimeout(r, 400))
-  documents.value = MOCK_DOCUMENTS.map(d => ({ ...d }))
+  // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
   initialized.value = true
   loading.value = false
 }

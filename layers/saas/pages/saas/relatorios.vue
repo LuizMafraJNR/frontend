@@ -12,6 +12,7 @@ const {
   dreMonthly, operationalKpi, customerSegments,
   loading, fetchAll,
 } = useReports()
+const { downloadCsv } = useCsvExport()
 
 onMounted(() => fetchAll())
 
@@ -92,23 +93,9 @@ const maxDailyRevenue = computed(() =>
   Math.max(1, ...salesByDay.value.map(d => d.revenue)),
 )
 
-// ── Export CSV (por tab) ────────────────────────────────────────────────────
-const escapeCSV = (v: unknown) => {
-  const s = v == null ? '' : String(v)
-  return /[";,\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-}
+// ── Export CSV (por tab) — delega ao util compartilhado useCsvExport ──────────
 const downloadCSV = (filename: string, header: string[], rows: unknown[][]) => {
-  const lines = [header.join(',')]
-  for (const r of rows) lines.push(r.map(escapeCSV).join(','))
-  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  downloadCsv(filename, header, rows)
 }
 
 const exportCurrent = () => {
@@ -151,56 +138,36 @@ const exportCurrent = () => {
 <template>
   <div>
     <!-- ── Header ───────────────────────────────────────────────────────── -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div>
-        <h1 style="font-size: 24px; font-weight: 700; color: var(--zima-text-primary); margin: 0;">Relatórios</h1>
-        <p style="font-size: 13px; color: var(--zima-text-muted); margin-top: 2px;">
-          Vendas, financeiro, operacional e clientes.
-        </p>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
+    <ZimaPageHeader title="Relatórios" description="Análises de vendas, financeiro, operacional e clientes">
+      <template #actions>
         <div
-          class="inline-flex rounded-md overflow-hidden hide-scrollbar"
+          class="inline-flex rounded-lg overflow-hidden hide-scrollbar"
           :style="{ background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)' }"
         >
           <button
             v-for="p in periodOptions"
             :key="p.key"
-            class="px-3 py-1.5 text-xs font-medium transition-colors"
+            class="px-3 py-1.5 text-xs font-medium transition-all"
             :style="{
               color: period === p.key ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
-              background: period === p.key ? 'var(--zima-blue-subtle)' : 'transparent',
+              background: period === p.key ? 'var(--zima-bg-surface-active)' : 'transparent',
+              transitionDuration: 'var(--zima-duration-base)',
+              border: 'none', cursor: 'pointer',
             }"
             @click="period = p.key as typeof period"
           >
             {{ p.label }}
           </button>
         </div>
-
         <ZimaButton size="sm" variant="ghost" @click="exportCurrent">
           <template #icon-left><Icon name="i-lucide-download" style="width:14px;height:14px;" /></template>
           Exportar
         </ZimaButton>
-      </div>
-    </div>
-
-    <!-- ── Sub-tabs ─────────────────────────────────────────────────────── -->
-    <div style="border-bottom: 1px solid var(--zima-border-divider); display: flex; gap: 4px; margin-bottom: 24px; overflow-x: auto;" class="hide-scrollbar">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        style="padding: 10px 16px; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 150ms; white-space: nowrap;"
-        :style="{
-          color: activeTab === tab.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
-          borderBottomColor: activeTab === tab.key ? 'var(--zima-blue-core)' : 'transparent',
-          marginBottom: '-1px',
-        }"
-        @click="activeTab = tab.key"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
+      </template>
+      <template #tabs>
+        <ZimaSubTabs v-model="activeTab" :tabs="tabs" />
+      </template>
+    </ZimaPageHeader>
 
     <!-- ── Loading ──────────────────────────────────────────────────────── -->
     <template v-if="loading">
@@ -253,7 +220,7 @@ const exportCurrent = () => {
             >
               <span class="text-sm flex-1" :style="{ color: 'var(--zima-text-primary)' }">{{ row.service }}</span>
               <span class="text-xs tabular-nums" :style="{ color: 'var(--zima-text-muted)' }">{{ row.quantity }}×</span>
-              <span class="text-sm font-semibold tabular-nums" style="min-width: 110px; text-align: right; font-family: 'Geist Mono', monospace;" :style="{ color: 'var(--zima-text-primary)' }">
+              <span class="text-sm font-semibold tabular-nums" :style="{ minWidth: '110px', textAlign: 'right', fontFamily: 'var(--zima-font-mono)', color: 'var(--zima-text-primary)' }">
                 {{ fmtCurrency(row.revenue) }}
               </span>
             </div>
@@ -272,7 +239,7 @@ const exportCurrent = () => {
             >
               <span class="text-sm flex-1" :style="{ color: 'var(--zima-text-primary)' }">{{ row.professional }}</span>
               <span class="text-xs tabular-nums" :style="{ color: 'var(--zima-text-muted)' }">{{ row.appointments }} ag.</span>
-              <span class="text-sm font-semibold tabular-nums" style="min-width: 110px; text-align: right; font-family: 'Geist Mono', monospace;" :style="{ color: 'var(--zima-text-primary)' }">
+              <span class="text-sm font-semibold tabular-nums" :style="{ minWidth: '110px', textAlign: 'right', fontFamily: 'var(--zima-font-mono)', color: 'var(--zima-text-primary)' }">
                 {{ fmtCurrency(row.revenue) }}
               </span>
             </div>

@@ -55,6 +55,35 @@ const additionalOpen = ref(false)
 
 const saving = ref(false)
 
+// ── Busca de CEP (ViaCEP — API pública) ───────────────────────────────────────
+const cepLoading = ref(false)
+const buscarCep = async () => {
+  const cep = form.zip.replace(/\D/g, '')
+  if (cep.length !== 8) {
+    toast.warning('CEP inválido', 'Informe um CEP com 8 dígitos.')
+    return
+  }
+  cepLoading.value = true
+  try {
+    const data = await $fetch<{
+      logradouro?: string; bairro?: string; localidade?: string; uf?: string; erro?: boolean
+    }>(`https://viacep.com.br/ws/${cep}/json/`)
+    if (data.erro) {
+      toast.error('CEP não encontrado')
+      return
+    }
+    form.street = data.logradouro || form.street
+    form.neighborhood = data.bairro || form.neighborhood
+    form.city = data.localidade || form.city
+    form.state = (data.uf as typeof form.state) || form.state
+    toast.success('Endereço preenchido')
+  } catch {
+    toast.error('Não foi possível buscar o CEP', 'Verifique sua conexão e tente novamente.')
+  } finally {
+    cepLoading.value = false
+  }
+}
+
 // Populate form when editing
 watch(() => props.modelValue, (open) => {
   if (open) {
@@ -382,7 +411,8 @@ const handleSave = async () => {
                 variant="ghost"
                 size="sm"
                 class="w-full"
-                @click="toast.info('Busca de CEP em breve')"
+                :loading="cepLoading"
+                @click="buscarCep"
               >
                 Buscar
               </ZimaButton>

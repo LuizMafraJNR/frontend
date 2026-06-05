@@ -110,6 +110,8 @@ export const PERIODS = [
 
 // ── Mock data helpers ─────────────────────────────────────────────────────────
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 const today = new Date()
 const thisMonth = today.toISOString().slice(0, 7)
 
@@ -410,16 +412,7 @@ const MOCK_PAYABLES: Payable[] = [
   },
 ]
 
-// ── Monthly chart data (6 months) ────────────────────────────────────────────
-
-const MOCK_MONTHLY: MonthlyData[] = [
-  { month: 'Nov', income: 14200, expenses: 9800 },
-  { month: 'Dez', income: 18600, expenses: 10200 },
-  { month: 'Jan', income: 12100, expenses: 11400 },
-  { month: 'Fev', income: 15300, expenses: 10800 },
-  { month: 'Mar', income: 17900, expenses: 11800 },
-  { month: 'Abr', income: 24560, expenses: 8320 },
-]
+// (monthlyData agora é derivado das transações — ver computed abaixo.)
 
 // ── Commissions ───────────────────────────────────────────────────────────────
 
@@ -484,28 +477,47 @@ const MOCK_DRE: DRECategory[] = [
   { key: 'lucro_liq', label: 'Lucro Líquido', type: 'net', current: 9014.50, previous: 3610, isSubtotal: true },
 ]
 
-// ── Singleton refs ─────────────────────────────────────────────────────────────
+// ── Singleton refs (persistidos — SSR-safe via persistedRef) ────────────────────
 
-const transactions = ref<Transaction[]>([])
-const receivables = ref<Receivable[]>([])
-const payables = ref<Payable[]>([])
-const commissions = ref<CommissionEntry[]>([])
-const monthlyData = ref<MonthlyData[]>([])
-const dreData = ref<DRECategory[]>([])
+const transactions = persistedRef<Transaction[]>('financial:transactions', () => MOCK_TRANSACTIONS.map(t => ({ ...t })))
+const receivables = persistedRef<Receivable[]>('financial:receivables', () => MOCK_RECEIVABLES.map(r => ({ ...r })))
+const payables = persistedRef<Payable[]>('financial:payables', () => MOCK_PAYABLES.map(p => ({ ...p })))
+const commissions = persistedRef<CommissionEntry[]>('financial:commissions', () => MOCK_COMMISSIONS.map(c => ({ ...c })))
+// dreData permanece ilustrativo (categorias contábeis que o mock de transações não
+// detalha — EBITDA, deduções etc.). monthlyData é DERIVADO das transações (vivo).
+const dreData = persistedRef<DRECategory[]>('financial:dre', () => MOCK_DRE.map(d => ({ ...d })))
 const loading = ref(false)
+const initialized = ref(false)
+
+// monthlyData — receita/despesa pagas por mês, derivadas das transações reais.
+// Tempo real: uma venda no PDV move imediatamente o mês corrente.
+const PT_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const monthlyData = computed<MonthlyData[]>(() => {
+  const result: MonthlyData[] = []
+  const base = new Date()
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(base.getFullYear(), base.getMonth() - i, 1)
+    const ym = d.toISOString().slice(0, 7)
+    const inMonth = transactions.value.filter(t => t.status === 'PAID' && t.date.startsWith(ym))
+    result.push({
+      month: PT_MONTHS[d.getMonth()]!,
+      income: inMonth.filter(t => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0),
+      expenses: inMonth.filter(t => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0),
+    })
+  }
+  return result
+})
 
 // ── Composable ────────────────────────────────────────────────────────────────
 
 export const useFinancial = () => {
   const fetchAll = async () => {
+    // Singleton já está hidratado (seed ou localStorage); só simula latência uma vez.
+    // Não re-seeda: isso preservaria as mutações persistidas entre navegações.
+    if (initialized.value) return
     loading.value = true
     await new Promise(r => setTimeout(r, 400))
-    transactions.value = MOCK_TRANSACTIONS.map(t => ({ ...t }))
-    receivables.value = MOCK_RECEIVABLES.map(r => ({ ...r }))
-    payables.value = MOCK_PAYABLES.map(p => ({ ...p }))
-    commissions.value = MOCK_COMMISSIONS.map(c => ({ ...c }))
-    monthlyData.value = [...MOCK_MONTHLY]
-    dreData.value = MOCK_DRE.map(d => ({ ...d }))
+    initialized.value = true
     loading.value = false
   }
 
@@ -528,6 +540,18 @@ export const useFinancial = () => {
       rec.status = 'RECEIVED'
       rec.receivedAt = new Date().toISOString().slice(0, 16).replace('T', ' ')
       rec.paymentMethod = method
+      // Integração: recebimento entra como receita (alimenta faturamento/DRE).
+      addTransaction({
+        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        description: `Recebimento — ${rec.description}`,
+        type: 'INCOME',
+        category: rec.category,
+        amount: rec.amount,
+        paymentMethod: method,
+        status: 'PAID',
+        clientId: rec.clientId,
+        clientName: rec.clientName,
+      })
     }
   }
 
@@ -553,6 +577,16 @@ export const useFinancial = () => {
       pay.status = 'PAID'
       pay.paidAt = new Date().toISOString().slice(0, 16).replace('T', ' ')
       pay.paymentMethod = method
+      // Integração: pagamento entra como despesa (alimenta DRE/lucro).
+      addTransaction({
+        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        description: `Pagamento — ${pay.description}`,
+        type: 'EXPENSE',
+        category: pay.category,
+        amount: pay.amount,
+        paymentMethod: method,
+        status: 'PAID',
+      })
     }
   }
 
@@ -575,6 +609,79 @@ export const useFinancial = () => {
     await new Promise(r => setTimeout(r, 400))
     const entry = commissions.value.find(c => c.professionalId === professionalId && c.period === period)
     if (entry) entry.status = 'PAID'
+  }
+
+  /**
+   * Registra comissão de uma venda (integração Caixa → Comissões).
+   * CommissionEntry é um AGREGADO por (profissional, período): faz find-or-create
+   * e incrementa — nunca cria uma linha por venda. O período usa o mês corrente
+   * em pt-BR (ex.: "Maio 2026"), no mesmo formato do mock.
+   */
+  const registerCommission = (args: {
+    professionalId: string
+    professionalName: string
+    professionalRole: string
+    rate: number
+    serviceRevenue: number
+    serviceName?: string
+  }): void => {
+    const period = capitalize(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
+    const addCommission = (args.serviceRevenue * args.rate) / 100
+    let entry = commissions.value.find(c => c.professionalId === args.professionalId && c.period === period)
+    if (!entry) {
+      entry = {
+        professionalId: args.professionalId,
+        professionalName: args.professionalName,
+        professionalRole: args.professionalRole,
+        appointments: 0,
+        revenue: 0,
+        rate: args.rate,
+        commission: 0,
+        status: 'PENDING',
+        period,
+        serviceBreakdown: [],
+      }
+      commissions.value.unshift(entry)
+    }
+    entry.appointments += 1
+    entry.revenue += args.serviceRevenue
+    entry.commission += addCommission
+    if (args.serviceName) {
+      const bd = entry.serviceBreakdown ?? (entry.serviceBreakdown = [])
+      const line = bd.find(l => l.service === args.serviceName)
+      if (line) {
+        line.count += 1
+        line.revenue += args.serviceRevenue
+      } else {
+        bd.push({ service: args.serviceName, count: 1, revenue: args.serviceRevenue })
+      }
+    }
+  }
+
+  /**
+   * Reverte a comissão de uma venda estornada (decrementa o agregado do período).
+   * Mantém a simetria do estorno: financeiro + estoque + comissão.
+   */
+  const reverseCommission = (args: {
+    professionalId: string
+    rate: number
+    serviceRevenue: number
+    serviceName?: string
+  }): void => {
+    const period = capitalize(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
+    const entry = commissions.value.find(c => c.professionalId === args.professionalId && c.period === period)
+    if (!entry) return
+    const dec = (args.serviceRevenue * args.rate) / 100
+    entry.appointments = Math.max(0, entry.appointments - 1)
+    entry.revenue = Math.max(0, entry.revenue - args.serviceRevenue)
+    entry.commission = Math.max(0, entry.commission - dec)
+    if (args.serviceName && entry.serviceBreakdown) {
+      const line = entry.serviceBreakdown.find(l => l.service === args.serviceName)
+      if (line) {
+        line.count = Math.max(0, line.count - 1)
+        line.revenue = Math.max(0, line.revenue - args.serviceRevenue)
+      }
+    }
   }
 
   // ── KPI computeds for current month (PAID only) ──────────────────────────
@@ -605,14 +712,35 @@ export const useFinancial = () => {
       .reduce((sum, p) => sum + p.amount, 0),
   )
 
+  // ── Fluxo de caixa previsional (30/60/90 dias) ─────────────────────────────
+  // Projeta o saldo a partir das contas a receber/pagar pendentes que vencem
+  // dentro de cada horizonte. Reage às contas que se movem (marcar recebido/pago
+  // remove a conta do projetado e vira transação real).
+  const cashflowForecast = computed(() => {
+    const horizons = [30, 60, 90]
+    const now = Date.now()
+    const limit = (days: number) => now + days * 86_400_000
+    return horizons.map(days => {
+      const cutoff = limit(days)
+      const inflow = receivables.value
+        .filter(r => (r.status === 'PENDING' || r.status === 'OVERDUE') && new Date(r.dueDate + 'T00:00:00').getTime() <= cutoff)
+        .reduce((s, r) => s + r.amount, 0)
+      const outflow = payables.value
+        .filter(p => (p.status === 'PENDING' || p.status === 'OVERDUE') && new Date(p.dueDate + 'T00:00:00').getTime() <= cutoff)
+        .reduce((s, p) => s + p.amount, 0)
+      return { days, inflow, outflow, net: inflow - outflow }
+    })
+  })
+
   return {
     transactions, receivables, payables, commissions, monthlyData, dreData, loading,
     fetchAll,
     cancelTransaction, addTransaction,
     markReceivableReceived, cancelReceivable, addReceivable,
     markPayablePaid, cancelPayable, addPayable,
-    payCommission,
+    payCommission, registerCommission, reverseCommission,
     kpiIncome, kpiExpenses, kpiProfit, kpiReceivable, kpiPayable,
+    cashflowForecast,
     PERIODS,
   }
 }

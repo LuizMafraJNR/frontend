@@ -234,7 +234,7 @@ const MOCK_CUSTOMERS: Customer[] = [
   },
 ]
 
-const customers = ref<Customer[]>([])
+const customers = persistedRef<Customer[]>('customers:list', () => MOCK_CUSTOMERS.map(c => ({ ...c })))
 const loading = ref(false)
 const initialized = ref(false)
 
@@ -243,7 +243,7 @@ export const useCustomers = () => {
     if (initialized.value) return
     loading.value = true
     await new Promise(resolve => setTimeout(resolve, 400))
-    customers.value = [...MOCK_CUSTOMERS]
+    // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
     initialized.value = true
     loading.value = false
   }
@@ -289,6 +289,34 @@ export const useCustomers = () => {
     )
   }
 
+  /** Aplica uma tag a vários clientes de uma vez (ação em lote). Sem duplicar. */
+  const addTagToCustomers = (ids: string[], tag: string): number => {
+    const clean = tag.trim()
+    if (!clean) return 0
+    let affected = 0
+    customers.value.forEach(c => {
+      if (ids.includes(c.id) && !c.tags.includes(clean)) {
+        c.tags = [...c.tags, clean]
+        affected++
+      }
+    })
+    return affected
+  }
+
+  /**
+   * Calcula o status do cliente conforme as regras de negócio (docs/screens/03-clientes.md):
+   * VIP: gasto > R$ 5000 OU visitas > 20 · NEW: cadastrado há < 30 dias sem visita ·
+   * INACTIVE: sem visita há > 90 dias · ACTIVE: caso contrário.
+   */
+  const computeCustomerStatus = (c: Customer): CustomerStatus => {
+    if (c.totalSpent > 5000 || c.visits > 20) return 'VIP'
+    const now = Date.now()
+    const daysSince = (iso?: string) => (iso ? (now - new Date(iso + 'T00:00:00').getTime()) / 86_400_000 : Infinity)
+    if (!c.lastVisitDate && daysSince(c.since) < 30) return 'NEW'
+    if (daysSince(c.lastVisitDate) > 90) return 'INACTIVE'
+    return 'ACTIVE'
+  }
+
   return {
     customers,
     loading,
@@ -298,5 +326,7 @@ export const useCustomers = () => {
     updateCustomer,
     deleteCustomer,
     searchCustomers,
+    addTagToCustomers,
+    computeCustomerStatus,
   }
 }

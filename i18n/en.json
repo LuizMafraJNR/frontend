@@ -70,5 +70,226 @@
       "cancelled": "Cancelled",
       "completed": "Completed"
     }
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "compare": "Compare",
+      "faq": "FAQ",
+      "signin": "Sign in",
+      "start": "Join waitlist"
+    },
+    "hero": {
+      "eyebrow": "Zima Platform · Closed beta",
+      "titleA": "Your entire operation.\nIn one place.",
+      "titleB": "All-in-one management.\nNative AI.\nBuilt for Brazil.",
+      "titleC": "Your whole business.\nOne platform.",
+      "sub": "Scheduling, clients, finance, inventory, invoicing, AI support and marketing campaigns — for salons, aesthetics clinics, pet shops and studios. Built in Brazil.",
+      "ctaPrimary": "Get early access",
+      "ctaSecondary": "See how it works",
+      "notice": "Closed beta · Limited spots · Launching soon",
+      "tabs": {
+        "agenda": "Calendar",
+        "inbox": "AI Support",
+        "pdv": "POS",
+        "dre": "Finance"
+      }
+    },
+    "trusted": "Coming soon · customer stories in production",
+    "problem": {
+      "eyebrow": "The problem",
+      "title": "Is this how you still run your business?",
+      "sub": "Most salons and clinics operate with 5 disconnected tools. The result is double work, lost revenue and zero visibility on real profit.",
+      "items": [
+        { "t": "Bookings on WhatsApp", "d": "No auto-confirm. No-shows happen every day.", "bad": "No-show" },
+        { "t": "Cash on paper", "d": "You know what came in — not what you actually made.", "bad": "No visibility" },
+        { "t": "Stock in your head", "d": "Product is out. Client is waiting. Where's the supplier?", "bad": "Stockout" },
+        { "t": "Improvised marketing", "d": "Random Instagram posts, no segmentation, no metrics.", "bad": "No conversion" },
+        { "t": "Support until 11pm", "d": "Messages outside hours. You reply from the couch.", "bad": "Burnout" },
+        { "t": "3+ systems that don't talk", "d": "Calendar one place, finance another, invoice a third.", "bad": "Rework" }
+      ]
+    },
+    "solution": {
+      "eyebrow": "The solution",
+      "title": "One platform. Fourteen modules.\nOne single flow.",
+      "sub": "A POS sale automatically records revenue, calculates commission, updates inventory, issues the invoice and refreshes the P&L. No spreadsheets. No double entry. No exceptions.",
+      "flow": [
+        "Client books online",
+        "AI confirms on WhatsApp",
+        "Pro performs service",
+        "POS closes sale",
+        "Stock · Commission · Invoice · P&L"
+      ],
+      "footAuto": "Automatic",
+      "footDesc": "Everything connected in real time — no external integrations, no code.",
+      "footModules": "14 integrated modules",
+      "footDb": "1 database",
+      "footSheets": "0 spreadsheets"
+    },
+    "features": {
+      "eyebrow": "Features",
+      "title": "Everything you need.\nNothing you don't.",
+      "sub": "Fourteen integrated modules that replace scheduling, CRM, ERP, support, marketing and tax — with zero external orchestration.",
+      "preview": "Live preview",
+      "items": [
+        { "k": "agenda", "t": "Smart Calendar",       "d": "Day, week or list views. Auto-confirmations via WhatsApp. Real-time status." },
+        { "k": "ia",     "t": "AI & Automation",      "d": "Configurable AI agent for 24/7 support. Knowledge base, visual flows, smart handoff." },
+        { "k": "inbox",  "t": "Multi-channel Inbox",  "d": "WhatsApp, Instagram and Webchat in a single inbox. Book directly from chat." },
+        { "k": "pdv",    "t": "Integrated POS",       "d": "One sale feeds finance, commission and stock automatically. PIX, card, cash." },
+        { "k": "fin",    "t": "Finance with P&L",     "d": "Revenue, expenses, AP/AR and a full P&L. Always live, not just month-end." },
+        { "k": "stock",  "t": "Inventory",            "d": "SKU, variants, suppliers and tracked movements. Auto-reorder alerts." },
+        { "k": "camp",   "t": "Marketing Campaigns",  "d": "Visual segmentation, variable editor, scheduling and conversion metrics." },
+        { "k": "nf",     "t": "Invoicing",            "d": "NFS-e and NF-e issued in-platform. Tax regime setup, automatic delivery." }
+      ]
+    },
+    "diff": {
+      "eyebrow": "Differentiators",
+      "title": "Why Zima\nand not the rest",
+      "items": [
+        { "t": "Native support AI", "d": "Not a third-party integration. The agent was designed inside the platform — it knows your catalog, your calendar, your rules." },
+        { "t": "Real-time P&L", "d": "The income statement is recalculated with every sale. Open the app at midnight and see today's profit." },
+        { "t": "POS → Stock → Tax → Finance", "d": "One register operation triggers four updates. Zero extra config." },
+        { "t": "Built for Brazil", "d": "Municipal NFS-e, native PIX, WhatsApp Business API, every tax regime from Simples to Lucro Real." },
+        { "t": "Modern enterprise design", "d": "Your team will want to open the app. Your client will notice. Your brand levels up." },
+        { "t": "Command palette (Ctrl K)", "d": "Run the whole system without leaving the keyboard. Every action a shortcut away." }
+      ]
+    },
+    "compare": {
+      "eyebrow": "Comparison",
+      "title": "Zima vs. the rest of the market",
+      "sub": "Competitors solve parts of the problem. Zima is the only one that unifies calendar, tax, AI and finance.",
+      "legendYes": "Included",
+      "legendBasic": "Basic",
+      "legendNo": "Not available",
+      "feature": "Feature",
+      "bestChoice": "Best choice",
+      "rows": [
+        ["Online booking", true, true, true, true, false, true],
+        ["Integrated POS", true, false, true, true, true, false],
+        ["AI for support", true, false, false, false, false, false],
+        ["Multi-channel inbox", true, false, false, false, false, false],
+        ["Marketing campaigns", true, "Basic", "Basic", false, false, false],
+        ["Inventory", true, false, true, true, true, false],
+        ["Integrated invoicing", true, false, false, false, true, false],
+        ["Full P&L", true, false, false, false, true, false],
+        ["Auto commissions", true, false, true, true, false, true],
+        ["Modern design", "★★", "★", false, "★", false, false],
+        ["BR market focus", true, true, false, true, true, true]
+      ]
+    },
+    "testi": {
+      "eyebrow": "Coming soon",
+      "title": "Customer stories in production",
+      "sub": "We're piloting with owners and managers in Joinville and the region. First testimonials will be published soon.",
+      "cta": "Join the waitlist",
+      "soon": "Coming soon · pilot"
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "Preview pricing for launch.",
+      "sub": "Planned prices for when we open. Sign up now to lock in special founder pricing.",
+      "monthly": "Monthly",
+      "yearly": "Annual",
+      "save": "Save 20%",
+      "cta": "Reserve founder spot",
+      "ctaEnterprise": "Talk to sales",
+      "perMonth": "/mo",
+      "popular": "Most popular",
+      "consultation": "Custom pricing",
+      "yearly_note": "billed annually",
+      "cancel_note": "cancel anytime",
+      "tiers": [
+        {
+          "k": "starter",
+          "t": "Starter",
+          "d": "For solo professionals leveling up.",
+          "price": { "m": 79, "y": 63 },
+          "popular": false,
+          "features": ["Smart calendar", "CRM (up to 500)", "Basic POS", "1 user", "Manual WhatsApp"]
+        },
+        {
+          "k": "pro",
+          "t": "Professional",
+          "d": "For salons and clinics growing with a team.",
+          "price": { "m": 189, "y": 151 },
+          "popular": true,
+          "features": ["Everything in Starter, unlimited", "Unlimited team · commissions", "Inventory + suppliers", "Unlimited NFS-e + NF-e", "Multi-channel inbox", "Marketing campaigns"]
+        },
+        {
+          "k": "ent",
+          "t": "Enterprise",
+          "d": "For chains, franchises and multi-location ops.",
+          "price": null,
+          "popular": false,
+          "features": ["Everything in Professional", "24/7 AI & Automation", "Multi-location consolidated", "P&L per location", "API + custom integrations", "Dedicated account manager"]
+        }
+      ]
+    },
+    "integ": {
+      "eyebrow": "Integrations",
+      "title": "Connected with everything\nyou already use",
+      "sub": "Payments, calendars, WhatsApp Business, municipal tax, accounting. Plug and play."
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Honest questions,\nhonest answers",
+      "contact": "Missing an answer? Talk to our team — we reply within 1 business hour.",
+      "contactBtn": "Talk to a human",
+      "items": [
+        ["Do I need a credit card to try?", "No. Create an account with email, pick your business type and you're in within 5 minutes. We only charge if you decide to continue after the 14 days."],
+        ["What if I already use another system? How do I migrate?", "We import clients, schedule and catalog from spreadsheet or directly from Booksy, Trinks, Mindbody and iGestão. Our team does the migration with you, at no cost."],
+        ["Does invoicing work in my city?", "NFS-e is certified in over 4,500 Brazilian municipalities, including every capital. If yours isn't yet, we integrate within 5 business days."],
+        ["Does it work on mobile?", "Yes. The whole platform is responsive and there are native iOS and Android apps for calendar, POS and support on the go."],
+        ["What if my team is small? Is it worth it?", "The Starter plan was designed for solo pros. From R$ 79/mo you get a professional calendar, CRM and POS — cheaper than losing 1 client per month to a no-show."],
+        ["How does the support AI work?", "You configure name, tone and knowledge base. The AI answers on WhatsApp, schedules, confirms and hands off to a human when needed. Trained on beauty industry cases."],
+        ["Is my data safe?", "LGPD compliance, encryption at rest and in transit, daily backups, ISO 27001 certification underway. You own your data — CSV export anytime."]
+      ]
+    },
+    "cta": {
+      "eyebrow": "Reserve your spot",
+      "title": "Your business deserves more.\nBe among the first.",
+      "sub": "Closed beta with early access and special founder pricing."
+    },
+    "waitlist": {
+      "eyebrow": "Early access · Closed beta",
+      "title": "Be among the first\nto use Zima.",
+      "sub": "We're in closed beta. Register to join the queue and receive launch updates as soon as they're available.",
+      "perks": [
+        "Access before public launch",
+        "Special founder pricing",
+        "Guided onboarding with the Zima team",
+        "Direct channel for feedback and suggestions"
+      ],
+      "counter": "people already on the waitlist",
+      "namePlaceholder": "Your name",
+      "nameLabel": "Full name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@email.com",
+      "whatsappLabel": "WhatsApp",
+      "whatsappPlaceholder": "(47) 99999-9999",
+      "optional": "optional",
+      "submit": "Join the waitlist",
+      "privacy": "No spam. Your data stays with us.",
+      "successTitle": "You're on the list!",
+      "successText": "We'll notify you as soon as Zima is available for you. Keep an eye on your email and WhatsApp.",
+      "position": "Queue position:"
+    },
+    "foot": {
+      "tag": "Everything your business needs. In one place.",
+      "product": "Product",
+      "company": "Company",
+      "resources": "Resources",
+      "legal": "Legal",
+      "rights": "© 2026 Zima Tecnologia · Made in Joinville, SC, Brazil",
+      "statusOnline": "All systems operating",
+      "productLinks": ["Features", "Pricing", "Integrations", "Roadmap", "Changelog"],
+      "companyLinks": ["About", "Careers", "Blog", "Press", "Contact"],
+      "resourcesLinks": ["Docs", "API", "Status", "Community", "Migration"],
+      "legalLinks": ["Terms", "Privacy", "Security", "LGPD", "Cookies"],
+      "tagline": "Beauty, aesthetics and care"
+    },
+    "themeLight": "Switch to light",
+    "themeDark": "Switch to dark"
   }
 }

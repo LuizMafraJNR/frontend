@@ -3,9 +3,10 @@ import ModalProfissional from '../ModalProfissional.vue'
 
 definePageMeta({ layout: 'saas' })
 
-const { professionals, loading, fetchAll, createProfessional, statusLabel, statusVariant } = useProfessionals()
+const { professionals, loading, fetchAll, createProfessional, updateProfessional, statusLabel, statusVariant } = useProfessionals()
 const { services, fetchAll: fetchServices } = useServices()
 const toast = useZimaToast()
+const router = useRouter()
 
 onMounted(async () => {
   await Promise.all([fetchAll(), fetchServices()])
@@ -18,32 +19,93 @@ const handleSave = async (data: Parameters<typeof createProfessional>[0]) => {
   toast.success('Profissional adicionado à equipe!')
 }
 
+// ── Menu 3-dot do card ────────────────────────────────────────────────────────
+const openCardMenu = ref<string | null>(null)
+const openNewPro = () => { modalOpen.value = true }
+const editPro = (pro: typeof professionals.value[number]) => {
+  openCardMenu.value = null
+  router.push(`/saas/equipe/${pro.id}`) // edição completa (horários/comissões) no detalhe
+}
+const viewAgenda = (pro: typeof professionals.value[number]) => {
+  openCardMenu.value = null
+  router.push({ path: '/saas/agenda', query: { professional: pro.id } })
+}
+const toggleProStatus = async (pro: typeof professionals.value[number]) => {
+  const next = pro.status === 'active' ? 'inactive' : 'active'
+  await updateProfessional(pro.id, { status: next })
+  toast.success(next === 'active' ? 'Profissional reativado' : 'Profissional desativado')
+  openCardMenu.value = null
+}
+onMounted(() => {
+  const close = () => { openCardMenu.value = null }
+  document.addEventListener('click', close)
+  onUnmounted(() => document.removeEventListener('click', close))
+})
+
 const formatRevenue = (val: number) =>
   val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 const activeCount = computed(() => professionals.value.filter(p => p.status === 'active').length)
+
+// ── Busca e filtro ────────────────────────────────────────────────────────────
+const search = ref('')
+const debouncedSearch = useDebounce(search, 250)
+const statusFilter = ref<string>('all')
+const statusFilterOptions = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Ativos', value: 'active' },
+  { label: 'Inativos', value: 'inactive' },
+  { label: 'Em férias', value: 'vacation' },
+]
+const sortBy = ref<string>('name')
+const sortOptions = [
+  { label: 'Nome (A-Z)', value: 'name' },
+  { label: 'Mais receita', value: 'revenue' },
+  { label: 'Mais agendamentos', value: 'appointments' },
+]
+
+const filteredProfessionals = computed(() => {
+  let result = [...professionals.value]
+  if (debouncedSearch.value) {
+    const q = debouncedSearch.value.toLowerCase()
+    result = result.filter(p => p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q))
+  }
+  if (statusFilter.value !== 'all') {
+    result = result.filter(p => p.status === statusFilter.value)
+  }
+  result.sort((a, b) => {
+    if (sortBy.value === 'revenue') return b.revenueThisMonth - a.revenueThisMonth
+    if (sortBy.value === 'appointments') return b.appointmentsThisMonth - a.appointmentsThisMonth
+    return a.name.localeCompare(b.name)
+  })
+  return result
+})
 </script>
 
 <template>
   <div class="flex flex-col gap-6" data-testid="page-equipe">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-      <div>
-        <h1
-          class="text-2xl font-semibold"
-          :style="{ color: 'var(--zima-text-primary)', fontFamily: 'var(--zima-font-display)' }"
-        >
-          Equipe
-        </h1>
-        <p class="text-sm mt-0.5" :style="{ color: 'var(--zima-text-muted)' }">
-          {{ professionals.length }} profissionais · {{ activeCount }} ativos
-        </p>
-      </div>
+    <ZimaPageHeader
+      title="Equipe"
+      :description="`${professionals.length} profissionais · ${activeCount} ativos`"
+    >
+      <template #actions>
+        <ZimaButton @click="openNewPro">
+          <template #icon-left><Icon name="i-lucide-user-plus" style="width: 14px; height: 14px;" /></template>
+          Novo Profissional
+        </ZimaButton>
+      </template>
+    </ZimaPageHeader>
 
-      <ZimaButton @click="modalOpen = true">
-        <template #icon-left><Icon name="i-lucide-user-plus" style="width: 14px; height: 14px;" /></template>
-        Novo Profissional
-      </ZimaButton>
+    <!-- Toolbar: busca + filtros -->
+    <div v-if="!loading && professionals.length" class="flex flex-col sm:flex-row gap-2 sm:items-center">
+      <div class="flex-1">
+        <ZimaInput v-model="search" type="search" placeholder="Buscar por nome ou função...">
+          <template #prefix><Icon name="i-lucide-search" style="width: 14px; height: 14px;" /></template>
+        </ZimaInput>
+      </div>
+      <ZimaSelect v-model="statusFilter" :options="statusFilterOptions" style="min-width: 150px;" />
+      <ZimaSelect v-model="sortBy" :options="sortOptions" style="min-width: 180px;" />
     </div>
 
     <!-- Loading -->
@@ -64,10 +126,20 @@ const activeCount = computed(() => professionals.value.filter(p => p.status === 
       </ZimaButton>
     </div>
 
+    <!-- Sem resultados para o filtro -->
+    <div
+      v-else-if="filteredProfessionals.length === 0"
+      class="flex flex-col items-center justify-center py-16 gap-3"
+    >
+      <Icon name="i-lucide-search-x" style="width: 36px; height: 36px;" :style="{ color: 'var(--zima-text-muted)' }" />
+      <p class="text-sm" :style="{ color: 'var(--zima-text-muted)' }">Nenhum profissional encontrado para os filtros.</p>
+      <ZimaButton size="sm" variant="ghost" @click="search = ''; statusFilter = 'all'">Limpar filtros</ZimaButton>
+    </div>
+
     <!-- Grid de profissionais -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <NuxtLink
-        v-for="pro in professionals"
+        v-for="pro in filteredProfessionals"
         :key="pro.id"
         :to="`/saas/equipe/${pro.id}`"
         class="block no-underline"
@@ -101,9 +173,38 @@ const activeCount = computed(() => professionals.value.filter(p => p.status === 
                   </p>
                 </div>
               </div>
-              <ZimaBadge :variant="statusVariant(pro.status)" class="shrink-0">
-                {{ statusLabel(pro.status) }}
-              </ZimaBadge>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <ZimaBadge :variant="statusVariant(pro.status)">
+                  {{ statusLabel(pro.status) }}
+                </ZimaBadge>
+                <!-- Menu 3-dot -->
+                <div style="position: relative;">
+                  <button
+                    style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent; color: var(--zima-text-muted); cursor: pointer;"
+                    @click.stop.prevent="openCardMenu = openCardMenu === pro.id ? null : pro.id"
+                    @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-hover)'"
+                    @mouseleave="($event.currentTarget as HTMLElement).style.background = 'transparent'"
+                  >
+                    <Icon name="i-lucide-more-vertical" style="width: 15px; height: 15px;" />
+                  </button>
+                  <div
+                    v-if="openCardMenu === pro.id"
+                    style="position: absolute; right: 0; top: 30px; z-index: 60; min-width: 160px; padding: 4px; border-radius: var(--zima-radius-md); background: var(--zima-bg-surface-3); border: 1px solid var(--zima-border-default); box-shadow: var(--zima-shadow-md);"
+                    @click.stop.prevent
+                  >
+                    <button class="eq-menu-item" @click.stop.prevent="editPro(pro)">
+                      <Icon name="i-lucide-pencil" style="width: 13px; height: 13px;" /> Editar
+                    </button>
+                    <button class="eq-menu-item" @click.stop.prevent="viewAgenda(pro)">
+                      <Icon name="i-lucide-calendar" style="width: 13px; height: 13px;" /> Ver agenda
+                    </button>
+                    <button class="eq-menu-item" @click.stop.prevent="toggleProStatus(pro)">
+                      <Icon :name="pro.status === 'active' ? 'i-lucide-user-x' : 'i-lucide-user-check'" style="width: 13px; height: 13px;" />
+                      {{ pro.status === 'active' ? 'Desativar' : 'Ativar' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Serviços -->
@@ -176,3 +277,24 @@ const activeCount = computed(() => professionals.value.filter(p => p.status === 
     />
   </div>
 </template>
+
+<style scoped>
+.eq-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--zima-text-primary);
+  cursor: pointer;
+  transition: background 120ms;
+}
+.eq-menu-item:hover {
+  background: var(--zima-bg-surface-hover);
+}
+</style>

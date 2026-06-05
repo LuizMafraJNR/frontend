@@ -9,15 +9,20 @@ definePageMeta({ layout: 'saas' })
 const { appointments, loading, fetchAll, updateStatus, reschedule } = useAppointments()
 const { professionals, fetchAll: fetchProfessionals } = useProfessionals()
 const toast = useZimaToast()
+const domainEvents = useDomainEvents()
 
 onMounted(async () => {
   await Promise.all([fetchAll(), fetchProfessionals()])
 })
 
 // ── Estado da view ────────────────────────────────────────────────────────────
+const route = useRoute()
 const viewMode = ref<'day' | 'week' | 'list'>('day')
 const currentDate = ref(new Date().toISOString().slice(0, 10))
-const selectedProfessionalIds = ref<string[]>([])
+// Pré-filtra por profissional se vier ?professional=<id> (ex.: da tela de Equipe).
+const selectedProfessionalIds = ref<string[]>(
+  route.query.professional ? [route.query.professional as string] : [],
+)
 
 // ── Modal / Drawer ────────────────────────────────────────────────────────────
 const modalNovoOpen = ref(false)
@@ -183,9 +188,73 @@ const ACTION_NEXT_STATUS: Partial<Record<AppointmentStatus, { label: string; sta
 }
 
 const handleQuickAction = async (aptId: string, status: AppointmentStatus) => {
+  const apt = appointments.value.find(a => a.id === aptId)
+  const fromStatus = apt?.status
   await updateStatus(aptId, status)
   openActionMenu.value = null
   toast.success(`${STATUS_STYLE[status].label}!`)
+
+  // Confirmação dispara notificação (lembrete ao cliente, via IA/WhatsApp).
+  if (status === 'CONFIRMED' && apt) {
+    domainEvents.emit('appointment:statusChanged', {
+      appointmentId: apt.id,
+      clientName: apt.clientName,
+      serviceName: apt.serviceName,
+      professionalName: apt.professionalName,
+      from: fromStatus ?? 'PENDING',
+      to: 'CONFIRMED',
+    })
+  }
+
+  // "Iniciar atendimento" leva ao PDV pré-preenchido (integração Agenda → Caixa).
+  if (status === 'IN_PROGRESS' && apt) {
+    navigateTo({
+      path: '/saas/caixa',
+      query: {
+        appointmentId: apt.id,
+        clientId: apt.clientId ?? '',
+        serviceId: apt.serviceId ?? '',
+        professionalId: apt.professionalId ?? '',
+      },
+    })
+  }
+}
+
+// ── Cancelamento com motivo obrigatório ───────────────────────────────────────
+const cancelModalOpen = ref(false)
+const cancelAptId = ref<string | null>(null)
+const cancelReason = ref('')
+const cancelReasonOther = ref('')
+const cancelling = ref(false)
+const CANCEL_REASONS = [
+  'Cliente desmarcou',
+  'Cliente não compareceu (no-show)',
+  'Profissional indisponível',
+  'Reagendado',
+  'Outro',
+]
+const askCancel = (aptId: string) => {
+  cancelAptId.value = aptId
+  cancelReason.value = ''
+  cancelReasonOther.value = ''
+  cancelModalOpen.value = true
+  openActionMenu.value = null
+}
+const confirmCancel = async () => {
+  if (!cancelAptId.value) return
+  if (!cancelReason.value) {
+    toast.warning('Selecione o motivo do cancelamento')
+    return
+  }
+  const reason = cancelReason.value === 'Outro' ? (cancelReasonOther.value.trim() || 'Outro') : cancelReason.value
+  cancelling.value = true
+  try {
+    await updateStatus(cancelAptId.value, 'CANCELLED', reason)
+    toast.success('Agendamento cancelado', reason)
+    cancelModalOpen.value = false
+  } finally {
+    cancelling.value = false
+  }
 }
 
 const statusOptions = [
@@ -216,34 +285,25 @@ const listColumns = computed(() => [
 <template>
   <div class="flex flex-col gap-4 h-full" data-testid="page-agenda">
     <!-- ── Page Header ────────────────────────────────────────────────────── -->
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <!-- Esquerda: título + data -->
-      <div>
-        <h1
-          class="text-2xl font-semibold"
-          :style="{ color: 'var(--zima-text-primary)', fontFamily: 'var(--zima-font-display)' }"
-        >
-          Agenda
-        </h1>
-        <p class="text-sm mt-0.5" :style="{ color: '#94A3B8' }">
-          {{ headerDateLabel }}
-        </p>
-      </div>
-
-      <!-- Direita: controles -->
-      <div class="flex items-center gap-2 flex-wrap">
+    <ZimaPageHeader title="Agenda" :description="headerDateLabel">
+      <template #actions>
         <!-- Toggle visualização -->
-        <div class="flex items-center gap-0.5 p-0.5 rounded-lg" :style="{ background: 'var(--zima-bg-surface-2)' }">
+        <div
+          class="flex items-center gap-0.5 p-0.5 rounded-lg"
+          :style="{ background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)' }"
+        >
           <button
-            v-for="mode in [{ key: 'day', label: 'Dia' }, { key: 'week', label: 'Semana' }, { key: 'list', label: 'Lista' }]"
+            v-for="mode in [{ key: 'day', label: 'Dia', icon: 'i-lucide-calendar-days' }, { key: 'week', label: 'Semana', icon: 'i-lucide-calendar-range' }, { key: 'list', label: 'Lista', icon: 'i-lucide-list' }]"
             :key="mode.key"
-            class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all"
             :style="{
-              background: viewMode === mode.key ? 'var(--zima-bg-surface-3)' : 'transparent',
+              background: viewMode === mode.key ? 'var(--zima-bg-surface-active)' : 'transparent',
               color: viewMode === mode.key ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
+              transitionDuration: 'var(--zima-duration-base)',
             }"
             @click="viewMode = mode.key as 'day' | 'week' | 'list'"
           >
+            <Icon :name="mode.icon" style="width: 13px; height: 13px;" />
             {{ mode.label }}
           </button>
         </div>
@@ -253,37 +313,43 @@ const listColumns = computed(() => [
           v-if="viewMode !== 'list'"
           v-model="professionalSelectValue"
           :options="professionalOptions"
-          class="w-full sm:w-auto"
-          style="max-width: 200px;"
+          style="width: 190px;"
         />
 
         <!-- Navegação de data -->
         <div class="flex items-center gap-1">
           <button
-            class="flex items-center justify-center rounded-md transition-colors"
-            :style="{ width: '32px', height: '32px', background: 'var(--zima-bg-surface-2)', color: 'var(--zima-text-muted)' }"
+            class="flex items-center justify-center rounded-lg transition-colors"
+            :style="{
+              width: '32px', height: '32px',
+              background: 'var(--zima-bg-surface-2)',
+              border: '1px solid var(--zima-border-default)',
+              color: 'var(--zima-text-muted)',
+            }"
             aria-label="Anterior"
             @click="navigate(-1)"
+            @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'"
+            @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'"
           >
-            <Icon name="i-lucide-chevron-left" style="width: 16px; height: 16px;" />
+            <Icon name="i-lucide-chevron-left" style="width: 15px; height: 15px;" />
           </button>
 
-          <ZimaButton
-            v-if="!isToday"
-            variant="ghost"
-            size="sm"
-            @click="goToday"
-          >
-            Hoje
-          </ZimaButton>
+          <ZimaButton v-if="!isToday" variant="ghost" size="sm" @click="goToday">Hoje</ZimaButton>
 
           <button
-            class="flex items-center justify-center rounded-md transition-colors"
-            :style="{ width: '32px', height: '32px', background: 'var(--zima-bg-surface-2)', color: 'var(--zima-text-muted)' }"
+            class="flex items-center justify-center rounded-lg transition-colors"
+            :style="{
+              width: '32px', height: '32px',
+              background: 'var(--zima-bg-surface-2)',
+              border: '1px solid var(--zima-border-default)',
+              color: 'var(--zima-text-muted)',
+            }"
             aria-label="Próximo"
             @click="navigate(1)"
+            @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'"
+            @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'"
           >
-            <Icon name="i-lucide-chevron-right" style="width: 16px; height: 16px;" />
+            <Icon name="i-lucide-chevron-right" style="width: 15px; height: 15px;" />
           </button>
         </div>
 
@@ -292,8 +358,8 @@ const listColumns = computed(() => [
           <template #icon-left><Icon name="i-lucide-plus" style="width: 14px; height: 14px;" /></template>
           Novo Agendamento
         </ZimaButton>
-      </div>
-    </div>
+      </template>
+    </ZimaPageHeader>
 
     <!-- ── Loading ────────────────────────────────────────────────────────── -->
     <template v-if="loading">
@@ -468,7 +534,7 @@ const listColumns = computed(() => [
                     <button
                       class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left transition-colors"
                       :style="{ color: 'var(--zima-danger)' }"
-                      @click="handleQuickAction(row.id, 'CANCELLED'); openActionMenu = null"
+                      @click="askCancel(row.id)"
                       @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'"
                       @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = ''"
                     >
@@ -531,5 +597,32 @@ const listColumns = computed(() => [
       :appointment-id="drawerDetalheId"
       @updated="onDrawerUpdated"
     />
+
+    <!-- Modal: cancelar com motivo obrigatório -->
+    <ZimaModal v-model="cancelModalOpen" title="Cancelar agendamento" size="sm">
+      <div class="flex flex-col gap-3">
+        <p style="font-size: 13px; color: var(--zima-text-muted);">Informe o motivo do cancelamento:</p>
+        <div class="flex flex-col gap-1.5">
+          <label
+            v-for="r in CANCEL_REASONS"
+            :key="r"
+            class="flex items-center gap-2"
+            style="font-size: 13px; color: var(--zima-text-primary); cursor: pointer;"
+          >
+            <input v-model="cancelReason" type="radio" :value="r" name="cancel-reason" >
+            {{ r }}
+          </label>
+        </div>
+        <ZimaInput
+          v-if="cancelReason === 'Outro'"
+          v-model="cancelReasonOther"
+          placeholder="Descreva o motivo..."
+        />
+      </div>
+      <template #footer>
+        <ZimaButton variant="ghost" @click="cancelModalOpen = false">Voltar</ZimaButton>
+        <ZimaButton variant="danger" :loading="cancelling" @click="confirmCancel">Cancelar agendamento</ZimaButton>
+      </template>
+    </ZimaModal>
   </div>
 </template>

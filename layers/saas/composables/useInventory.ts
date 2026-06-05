@@ -659,10 +659,10 @@ const MOCK_MOVEMENTS: StockMovement[] = [
 
 // ── Estado singleton ──────────────────────────────────────────────────────────
 
-const products = ref<Product[]>([])
-const categories = ref<ProductCategory[]>([])
-const suppliers = ref<Supplier[]>([])
-const movements = ref<StockMovement[]>([])
+const products = persistedRef<Product[]>('inventory:products', () => MOCK_PRODUCTS.map(p => ({ ...p })))
+const categories = persistedRef<ProductCategory[]>('inventory:categories', () => MOCK_CATEGORIES.map(c => ({ ...c })))
+const suppliers = persistedRef<Supplier[]>('inventory:suppliers', () => MOCK_SUPPLIERS.map(s => ({ ...s })))
+const movements = persistedRef<StockMovement[]>('inventory:movements', () => MOCK_MOVEMENTS.map(m => ({ ...m })))
 const loading = ref(false)
 const initialized = ref(false)
 
@@ -681,10 +681,7 @@ async function fetchAll(): Promise<void> {
   if (initialized.value) return
   loading.value = true
   await new Promise(r => setTimeout(r, 500))
-  products.value = MOCK_PRODUCTS.map(p => ({ ...p }))
-  categories.value = MOCK_CATEGORIES.map(c => ({ ...c }))
-  suppliers.value = MOCK_SUPPLIERS.map(s => ({ ...s }))
-  movements.value = MOCK_MOVEMENTS.map(m => ({ ...m }))
+  // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
   initialized.value = true
   loading.value = false
 }
@@ -760,6 +757,71 @@ function registerEntry(
   })
 }
 
+/**
+ * Baixa de estoque por venda no PDV (integração Caixa → Estoque).
+ * Gera um StockMovement EXIT/SALE, decrementa o estoque e devolve o produto +
+ * se cruzou o nível mínimo (para o caller disparar o evento `stock:low`).
+ * Não dispara o evento aqui para manter o composable desacoplado da camada de UI.
+ */
+function registerSaleExit(
+  productId: string,
+  qty: number,
+  saleId: string,
+): { product: Product; crossedMin: boolean; outOfStock: boolean } | null {
+  const p = products.value.find(x => x.id === productId)
+  if (!p) return null
+  const qtyBefore = p.stock
+  const qtyAfter = Math.max(0, p.stock - qty)
+  const mov: StockMovement = {
+    id: 'mov-' + Date.now() + '-' + productId,
+    productId,
+    productName: p.name,
+    type: 'EXIT',
+    reason: 'SALE',
+    qty: -(qtyBefore - qtyAfter),
+    qtyBefore,
+    qtyAfter,
+    unitCost: p.costPrice,
+    totalCost: (qtyBefore - qtyAfter) * p.costPrice,
+    saleId,
+    createdBy: 'Luiz Matos',
+    createdAt: dDateTime(0, new Date().toTimeString().slice(0, 5)),
+  }
+  p.stock = qtyAfter
+  movements.value.unshift(mov)
+  const wasAboveMin = qtyBefore > p.minStock
+  const crossedMin = wasAboveMin && qtyAfter <= p.minStock && qtyAfter > 0
+  return { product: p, crossedMin, outOfStock: qtyAfter === 0 && qtyBefore > 0 }
+}
+
+/**
+ * Devolve produto ao estoque por estorno de venda (integração Caixa → Estoque).
+ * Gera um StockMovement RETURN e incrementa o estoque.
+ */
+function reverseSaleExit(productId: string, qty: number, saleId: string): void {
+  const p = products.value.find(x => x.id === productId)
+  if (!p) return
+  const qtyBefore = p.stock
+  const mov: StockMovement = {
+    id: 'mov-rev-' + Date.now() + '-' + productId,
+    productId,
+    productName: p.name,
+    type: 'RETURN',
+    reason: 'RETURN_SUPPLIER',
+    qty,
+    qtyBefore,
+    qtyAfter: qtyBefore + qty,
+    unitCost: p.costPrice,
+    totalCost: qty * p.costPrice,
+    saleId,
+    notes: `Estorno da venda ${saleId}`,
+    createdBy: 'Luiz Matos',
+    createdAt: dDateTime(0, new Date().toTimeString().slice(0, 5)),
+  }
+  p.stock = qtyBefore + qty
+  movements.value.unshift(mov)
+}
+
 function addSupplier(s: Omit<Supplier, 'id' | 'createdAt' | 'productsCount'>): void {
   suppliers.value.unshift({ ...s, id: 'sup-' + Date.now(), productsCount: 0, createdAt: dDate(0) })
 }
@@ -785,6 +847,8 @@ export const useInventory = () => {
     toggleProductActive,
     adjustStock,
     registerEntry,
+    registerSaleExit,
+    reverseSaleExit,
     addSupplier,
     updateSupplier,
   }

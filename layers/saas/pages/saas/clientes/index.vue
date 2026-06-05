@@ -6,7 +6,47 @@ import ModalCliente from '../ModalCliente.vue'
 definePageMeta({ layout: 'saas' })
 
 const toast = useZimaToast()
-const { customers, loading, fetchAll, deleteCustomer } = useCustomers()
+const { customers, loading, fetchAll, deleteCustomer, addTagToCustomers, computeCustomerStatus } = useCustomers()
+const { downloadCsv, num, dateSuffix } = useCsvExport()
+const { ltv, atRiskCustomers } = useCustomerInsights()
+const { addCampaign } = useCampaigns()
+
+// Status é DERIVADO das métricas (gasto/visitas/última visita) — fonte única de
+// verdade, em vez do campo armazenado (que poderia ficar stale). Vale para
+// badge, filtro e sort, para não dessincronizar.
+const statusOf = (c: Customer) => computeCustomerStatus(c)
+
+// ── Insights de CRM (alimentam a ação de reativação) ──────────────────────────
+const atRisk = computed(() => atRiskCustomers(customers.value))
+const totalLtv = computed(() => customers.value.reduce((s, c) => s + ltv(c), 0))
+const ltvMedio = computed(() => customers.value.length ? Math.round(totalLtv.value / customers.value.length) : 0)
+const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+// Ação win-back: cria campanha de reativação pré-segmentada para clientes em risco.
+const createWinbackCampaign = () => {
+  if (atRisk.value.length === 0) {
+    toast.info('Nenhum cliente em risco no momento')
+    return
+  }
+  addCampaign({
+    name: `Reativação — ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}`,
+    type: 'reactivation',
+    channel: 'whatsapp',
+    status: 'draft',
+    audienceSize: atRisk.value.length,
+    scheduledAt: null,
+    sentAt: null,
+    message: 'Olá {{nome_cliente}}! Sentimos sua falta 💙 Volte com 15% de desconto usando o cupom VOLTEI15. Agende já: {{link_agendamento}}',
+    couponCode: 'VOLTEI15',
+    segmentRules: [{ field: 'Risco de churn', operator: 'é', value: 'médio ou alto' }],
+    allClients: false,
+  })
+  toast.success(
+    'Campanha de reativação criada',
+    `${atRisk.value.length} cliente(s) em risco · rascunho salvo em Campanhas`,
+  )
+  navigateTo('/saas/campanhas?tab=rascunhos')
+}
 const route = useRoute()
 const router = useRouter()
 
@@ -84,7 +124,7 @@ const filteredCustomers = computed(() => {
   }
 
   if (statusFilter.value && statusFilter.value !== '__all__') {
-    result = result.filter(c => c.status === statusFilter.value)
+    result = result.filter(c => statusOf(c) === statusFilter.value)
   }
 
   if (tagsFilter.value && tagsFilter.value !== '__all__') {
@@ -127,7 +167,7 @@ const tableRows = computed(() =>
     email: c.email,
     phone: c.phone,
     tags: c.tags,
-    status: c.status,
+    status: statusOf(c),
     visits: c.visits,
     totalSpent: c.totalSpent,
     lastVisitDate: c.lastVisitDate,
@@ -181,20 +221,81 @@ const handleSaved = async () => {
   await fetchAll()
 }
 
-const handleDelete = async (customer: Customer) => {
+// ── Confirmação de exclusão (substitui confirm() nativo) ──────────────────────
+const deleteModalOpen = ref(false)
+const deleteTarget = ref<{ kind: 'single'; customer: Customer } | { kind: 'batch' } | null>(null)
+const deleting = ref(false)
+
+const deleteModalText = computed(() => {
+  if (deleteTarget.value?.kind === 'single') return `Excluir ${deleteTarget.value.customer.name}? Esta ação não pode ser desfeita.`
+  if (deleteTarget.value?.kind === 'batch') return `Excluir ${selectedIds.value.length} cliente(s)? Esta ação não pode ser desfeita.`
+  return ''
+})
+
+const handleDelete = (customer: Customer) => {
   openDropdownId.value = null
-  if (!confirm(`Excluir ${customer.name}?`)) return
-  await deleteCustomer(customer.id)
-  toast.success('Cliente excluído')
+  deleteTarget.value = { kind: 'single', customer }
+  deleteModalOpen.value = true
 }
 
-const handleBatchDelete = async () => {
-  if (!confirm(`Excluir ${selectedIds.value.length} cliente(s)?`)) return
-  for (const id of selectedIds.value) {
-    await deleteCustomer(id)
+const handleBatchDelete = () => {
+  deleteTarget.value = { kind: 'batch' }
+  deleteModalOpen.value = true
+}
+
+const confirmDelete = async () => {
+  if (!deleteTarget.value) return
+  deleting.value = true
+  try {
+    if (deleteTarget.value.kind === 'single') {
+      await deleteCustomer(deleteTarget.value.customer.id)
+      toast.success('Cliente excluído')
+    } else {
+      const n = selectedIds.value.length
+      for (const id of selectedIds.value) await deleteCustomer(id)
+      selectedIds.value = []
+      toast.success(`${n} cliente(s) excluído(s)`)
+    }
+    deleteModalOpen.value = false
+  } finally {
+    deleting.value = false
   }
-  selectedIds.value = []
-  toast.success('Clientes excluídos')
+}
+
+// ── Exportar selecionados para CSV ────────────────────────────────────────────
+const exportSelected = () => {
+  const rows = customers.value.filter(c => selectedIds.value.includes(c.id))
+  if (!rows.length) return
+  downloadCsv(
+    `clientes-${dateSuffix()}.csv`,
+    ['Nome', 'Telefone', 'Email', 'Status', 'Visitas', 'Total Gasto (R$)', 'Última Visita', 'Tags'],
+    rows.map(c => [
+      c.name, c.phone, c.email, CUSTOMER_STATUS[statusOf(c)]?.label ?? statusOf(c),
+      c.visits, num(c.totalSpent), c.lastVisitDate ?? '—', c.tags.join(', '),
+    ]),
+  )
+  toast.success(`${rows.length} cliente(s) exportado(s)`)
+}
+
+// ── Adicionar tag em lote ─────────────────────────────────────────────────────
+const tagModalOpen = ref(false)
+const batchTagInput = ref('')
+
+const openTagModal = () => {
+  batchTagInput.value = ''
+  tagModalOpen.value = true
+}
+
+const confirmAddTag = () => {
+  const tag = batchTagInput.value.trim()
+  if (!tag) {
+    toast.warning('Informe o nome da tag')
+    return
+  }
+  const affected = addTagToCustomers(selectedIds.value, tag)
+  tagModalOpen.value = false
+  if (affected > 0) toast.success(`Tag "${tag}" adicionada a ${affected} cliente(s)`)
+  else toast.info('Os clientes selecionados já possuíam essa tag')
 }
 
 const clearFilters = () => {
@@ -210,29 +311,62 @@ const clearFilters = () => {
   <div>
   <div class="flex flex-col gap-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <h1 style="font-size: 24px; font-weight: 700; color: var(--zima-text-primary);">Clientes</h1>
-        <span
-          class="flex items-center justify-center rounded-full px-2.5"
-          style="
-            height: 24px;
-            background: var(--zima-bg-surface-2);
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--zima-text-muted);
-            font-family: 'Geist Mono', monospace;
-          "
-        >
-          {{ customers.length }}
-        </span>
-      </div>
-      <ZimaButton variant="primary" @click="openNew">
-        <template #icon-left>
-          <Icon name="i-lucide-user-plus" style="width: 14px; height: 14px;" />
-        </template>
-        Novo Cliente
-      </ZimaButton>
+    <ZimaPageHeader
+      title="Clientes"
+      description="Gerencie e acompanhe seus clientes"
+      :badge="`${customers.length}`"
+    >
+      <template #actions>
+        <ZimaButton variant="primary" @click="openNew">
+          <template #icon-left>
+            <Icon name="i-lucide-user-plus" style="width: 14px; height: 14px;" />
+          </template>
+          Novo Cliente
+        </ZimaButton>
+      </template>
+    </ZimaPageHeader>
+
+    <!-- Painel de insights de CRM -->
+    <div v-if="!loading && customers.length" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <ZimaCard padding="md">
+        <div class="flex items-center gap-3">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--zima-blue-subtle); display: flex; align-items: center; justify-content: center;">
+            <Icon name="i-lucide-gem" style="width: 18px; height: 18px; color: var(--zima-blue-core);" />
+          </div>
+          <div>
+            <p style="font-size: 12px; color: var(--zima-text-muted);">LTV médio estimado</p>
+            <p style="font-size: 18px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">{{ fmtBRL(ltvMedio) }}</p>
+          </div>
+        </div>
+      </ZimaCard>
+      <ZimaCard padding="md">
+        <div class="flex items-center gap-3">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--zima-success-subtle, rgba(16,185,129,0.1)); display: flex; align-items: center; justify-content: center;">
+            <Icon name="i-lucide-users" style="width: 18px; height: 18px; color: var(--zima-success);" />
+          </div>
+          <div>
+            <p style="font-size: 12px; color: var(--zima-text-muted);">Base ativa</p>
+            <p style="font-size: 18px; font-weight: 700; color: var(--zima-text-primary); font-family: var(--zima-font-mono);">{{ customers.length - atRisk.length }} de {{ customers.length }}</p>
+          </div>
+        </div>
+      </ZimaCard>
+      <ZimaCard padding="md" :style="{ border: atRisk.length ? '1px solid rgba(245,158,11,0.3)' : undefined }">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center;">
+              <Icon name="i-lucide-user-minus" style="width: 18px; height: 18px; color: var(--zima-warning);" />
+            </div>
+            <div>
+              <p style="font-size: 12px; color: var(--zima-text-muted);">Em risco de churn</p>
+              <p style="font-size: 18px; font-weight: 700; color: var(--zima-warning); font-family: var(--zima-font-mono);">{{ atRisk.length }}</p>
+            </div>
+          </div>
+          <ZimaButton v-if="atRisk.length" size="sm" variant="secondary" @click="createWinbackCampaign">
+            <template #icon-left><Icon name="i-lucide-megaphone" style="width: 13px; height: 13px;" /></template>
+            Reativar
+          </ZimaButton>
+        </div>
+      </ZimaCard>
     </div>
 
     <!-- Batch actions bar -->
@@ -244,13 +378,13 @@ const clearFilters = () => {
       >
         <span style="font-size: 13px; font-weight: 500;">{{ selectedIds.length }} selecionado(s)</span>
         <div class="flex-1" />
-        <ZimaButton variant="ghost" size="sm" style="color: white;" @click="toast.info('Exportação em breve')">
+        <ZimaButton variant="ghost" size="sm" style="color: white;" @click="exportSelected">
           <template #icon-left>
             <Icon name="i-lucide-download" style="width: 13px; height: 13px;" />
           </template>
           Exportar
         </ZimaButton>
-        <ZimaButton variant="ghost" size="sm" style="color: white;" @click="toast.info('Adicionar tag em breve')">
+        <ZimaButton variant="ghost" size="sm" style="color: white;" @click="openTagModal">
           <template #icon-left>
             <Icon name="i-lucide-tag" style="width: 13px; height: 13px;" />
           </template>
@@ -371,14 +505,14 @@ const clearFilters = () => {
 
         <!-- Visits column -->
         <template #cell-visits="{ row }">
-          <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-secondary);">
+          <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-secondary);">
             {{ row.visits }}
           </span>
         </template>
 
         <!-- Total column -->
         <template #cell-total="{ row }">
-          <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-primary); font-weight: 500;">
+          <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-primary); font-weight: 500;">
             {{ formatCurrency(row.totalSpent as number) }}
           </span>
         </template>
@@ -457,6 +591,47 @@ const clearFilters = () => {
       :customer="editingCustomer"
       @saved="handleSaved"
     />
+
+    <!-- Modal: confirmar exclusão -->
+    <ZimaModal v-model="deleteModalOpen" title="Confirmar exclusão" size="sm">
+      <p style="font-size: 14px; color: var(--zima-text-secondary); line-height: 1.5;">
+        {{ deleteModalText }}
+      </p>
+      <template #footer>
+        <ZimaButton variant="ghost" @click="deleteModalOpen = false">Cancelar</ZimaButton>
+        <ZimaButton variant="danger" :loading="deleting" @click="confirmDelete">Excluir</ZimaButton>
+      </template>
+    </ZimaModal>
+
+    <!-- Modal: adicionar tag em lote -->
+    <ZimaModal v-model="tagModalOpen" title="Adicionar tag" size="sm">
+      <div class="flex flex-col gap-3">
+        <p style="font-size: 13px; color: var(--zima-text-muted);">
+          A tag será aplicada aos {{ selectedIds.length }} cliente(s) selecionado(s).
+        </p>
+        <ZimaInput
+          v-model="batchTagInput"
+          label="Nome da tag"
+          placeholder="ex.: Fidelizada, Black Friday..."
+          @keyup.enter="confirmAddTag"
+        />
+        <div v-if="allTags.length" class="flex flex-wrap gap-1.5">
+          <button
+            v-for="t in allTags.slice(0, 8)"
+            :key="t"
+            type="button"
+            style="font-size: 12px; padding: 3px 10px; border-radius: var(--zima-radius-full); border: 1px solid var(--zima-border-default); background: var(--zima-bg-surface-2); color: var(--zima-text-secondary); cursor: pointer; transition: all 120ms;"
+            @click="batchTagInput = t"
+            @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'var(--zima-blue-core)'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'"
+          >{{ t }}</button>
+        </div>
+      </div>
+      <template #footer>
+        <ZimaButton variant="ghost" @click="tagModalOpen = false">Cancelar</ZimaButton>
+        <ZimaButton variant="primary" @click="confirmAddTag">Adicionar</ZimaButton>
+      </template>
+    </ZimaModal>
   </div>
 
   <!-- Close dropdown on outside click -->

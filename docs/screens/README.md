@@ -2,6 +2,13 @@
 
 Documentação detalhada de cada tela da layer `saas`. Todas as telas usam o layout `saas` e o Design System Zima Blue.
 
+> **Backbone (integração + persistência):** as telas não são isoladas — compartilham
+> estado persistido e se integram (uma venda no PDV alimenta Financeiro, Estoque e
+> Comissões). Ver **[00-integracoes.md](00-integracoes.md)**.
+>
+> **Estado funcional atual** (o que está logic-tested / spec-confirmed / SSR-only por
+> tela e por fluxo): ver **[../saas-pente-fino-resumo.md](../saas-pente-fino-resumo.md)**.
+
 ## Mapa de telas
 
 | # | Tela | Rota | Arquivo | Doc |
@@ -20,6 +27,7 @@ Documentação detalhada de cada tela da layer `saas`. Todas as telas usam o lay
 | 12 | Notas Fiscais | `/saas/notas` | `pages/saas/notas.vue` | [12-notas.md](12-notas.md) |
 | 13 | Relatórios | `/saas/relatorios` | `pages/saas/relatorios.vue` | [13-relatorios.md](13-relatorios.md) |
 | 14 | Configurações | `/saas/configuracoes` | `pages/saas/configuracoes.vue` | [14-configuracoes.md](14-configuracoes.md) |
+| 15 | Perfil do usuário | `/saas/configuracoes/perfil` | `pages/saas/configuracoes/perfil.vue` | (ver 14-configuracoes.md) |
 
 ## Padrões comuns a todas as telas
 

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import ModalCliente from './ModalCliente.vue'
+import type { TxPaymentMethod } from '../../composables/useFinancial'
+
 definePageMeta({ layout: 'saas' })
 
 const toast = useZimaToast()
@@ -9,10 +12,16 @@ const router = useRouter()
 const { services, servicesByCategory, loading: servicesLoading, fetchAll: fetchServices } = useServices()
 const { professionals, fetchAll: fetchProfessionals } = useProfessionals()
 const { customers, fetchAll: fetchCustomers } = useCustomers()
-const { receivables, fetchAll: fetchFinancial, addTransaction } = useFinancial()
+const { receivables, fetchAll: fetchFinancial } = useFinancial()
+const { products: inventoryProducts, fetchAll: fetchInventory } = useInventory()
+// Efeitos de venda/estorno centralizados e testados (Financeiro+Estoque+Comissão+Cupom).
+const { commitSale, reverseSale } = useSaleCommit()
+
+// ── Cupom de campanha ─────────────────────────────────────────────────────────
+const couponCode = ref('')
 
 onMounted(async () => {
-  await Promise.all([fetchServices(), fetchProfessionals(), fetchCustomers(), fetchFinancial()])
+  await Promise.all([fetchServices(), fetchProfessionals(), fetchCustomers(), fetchFinancial(), fetchInventory()])
 
   // Pre-fill from appointment query params
   const { appointmentId, clientId, serviceId, professionalId } = route.query
@@ -39,18 +48,24 @@ const activeTab = ref<'services' | 'products'>('services')
 const serviceSearch = ref('')
 const productSearch = ref('')
 
-// ── Mock products ─────────────────────────────────────────────────────────────
+// ── Produtos (integração real com Estoque) ──────────────────────────────────────
 interface Product {
   id: string; name: string; price: number; stock: number; category: string; image?: string
 }
-const MOCK_PRODUCTS: Product[] = [
-  { id: 'prod-1', name: 'Shampoo Wella Luxe', price: 89.90, stock: 5, category: 'Cabelo' },
-  { id: 'prod-2', name: 'Máscara Kerastase', price: 145.00, stock: 3, category: 'Tratamento' },
-  { id: 'prod-3', name: 'Leave-in L\'Oréal', price: 62.50, stock: 8, category: 'Cabelo' },
-  { id: 'prod-4', name: 'Óleo Argan Marrocos', price: 78.00, stock: 0, category: 'Tratamento' },
-  { id: 'prod-5', name: 'Tinta Igora Royal 6/0', price: 32.00, stock: 12, category: 'Coloração' },
-  { id: 'prod-6', name: 'Gel Modelador Strong', price: 28.90, stock: 0, category: 'Finalização' },
-]
+// Catálogo de produtos para venda vem do Estoque (useInventory) — só produtos
+// ativos e marcados para venda. Estoque baixado de verdade ao finalizar.
+const displayProducts = computed<Product[]>(() =>
+  inventoryProducts.value
+    .filter(p => p.active && p.forSale)
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      price: p.salePrice,
+      stock: p.stock,
+      category: p.brand ?? '',
+      image: p.imageUrl,
+    })),
+)
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
 interface CartItem {
@@ -145,6 +160,18 @@ const clearCustomer = () => {
   customerQuery.value = ''
 }
 
+// ── Novo cliente inline (abre ModalCliente e já seleciona) ────────────────────
+const newCustomerModalOpen = ref(false)
+const openNewCustomer = () => { newCustomerModalOpen.value = true }
+const onNewCustomerSaved = async () => {
+  await fetchCustomers()
+  // Seleciona o cliente recém-criado (o mais recente — unshift coloca no topo).
+  const latest = customers.value[0]
+  if (latest) {
+    selectedCustomer.value = { id: latest.id, name: latest.name, phone: latest.phone, email: latest.email }
+  }
+}
+
 // ── Professionals dropdown options ────────────────────────────────────────────
 const professionalOptions = computed(() => [
   { label: 'Profissional...', value: '' },
@@ -166,9 +193,9 @@ const filteredServiceGroups = computed(() => {
 })
 
 const filteredProducts = computed(() => {
-  if (!productSearch.value) return MOCK_PRODUCTS
+  if (!productSearch.value) return displayProducts.value
   const q = productSearch.value.toLowerCase()
-  return MOCK_PRODUCTS.filter(p => p.name.toLowerCase().includes(q))
+  return displayProducts.value.filter(p => p.name.toLowerCase().includes(q))
 })
 
 // ── Totals ────────────────────────────────────────────────────────────────────
@@ -252,10 +279,17 @@ const observations = ref('')
 const observationsOpen = ref(false)
 
 // ── Can finalize ─────────────────────────────────────────────────────────────
+// Itens de serviço sem profissional definido (comissão precisa do responsável).
+const servicesMissingProfessional = computed(() =>
+  cart.value.filter(i => i.type === 'service' && !i.professionalId),
+)
+
 const canFinalize = computed(() => {
   if (cart.value.length === 0 || !selectedPayment.value) return false
   if (selectedPayment.value === 'cash' && cashReceived.value !== null && cashReceived.value < total.value) return false
   if (selectedPayment.value === 'split' && !splitValid.value) return false
+  // Todo serviço precisa de profissional (regra de comissão — docs/screens/10-caixa.md).
+  if (servicesMissingProfessional.value.length > 0) return false
   return true
 })
 
@@ -263,6 +297,7 @@ const canFinalize = computed(() => {
 interface SaleRecord {
   id: string; date: string; customerName: string
   items: CartItem[]; total: number; payment: string; professional: string
+  status?: 'completed' | 'reversed'
 }
 const saleHistory = ref<SaleRecord[]>([
   {
@@ -302,6 +337,41 @@ const histSearch = ref('')
 const histPayFilter = ref<string | null>(null)
 const histViewSaleId = ref<string | null>(null)
 const histViewSale = computed(() => saleHistory.value.find(s => s.id === histViewSaleId.value) ?? null)
+
+// ── Estorno de venda ──────────────────────────────────────────────────────────
+const reverseModalOpen = ref(false)
+const reverseTargetId = ref<string | null>(null)
+const reversing = ref(false)
+const reverseTarget = computed(() => saleHistory.value.find(s => s.id === reverseTargetId.value) ?? null)
+
+const askReverseSale = (id: string) => {
+  reverseTargetId.value = id
+  reverseModalOpen.value = true
+}
+
+const confirmReverseSale = async () => {
+  const sale = reverseTarget.value
+  if (!sale) return
+  reversing.value = true
+  try {
+    await new Promise(r => setTimeout(r, 400))
+    // Estorno simétrico (Financeiro + Estoque + Comissão) — centralizado e testado.
+    reverseSale({
+      saleId: sale.id,
+      total: sale.total,
+      customerName: sale.customerName,
+      items: sale.items.map(i => ({
+        id: i.id, type: i.type, name: i.name, qty: i.qty,
+        lineTotal: itemSubtotal(i), professionalId: i.professionalId || undefined,
+      })),
+    })
+    sale.status = 'reversed'
+    reverseModalOpen.value = false
+    toast.success('Venda estornada', `${formatCurrency(sale.total)} estornado · estoque devolvido`)
+  } finally {
+    reversing.value = false
+  }
+}
 
 const filteredHistory = computed(() => {
   let r = [...saleHistory.value]
@@ -379,26 +449,31 @@ const finalizeSale = async () => {
       professional: saleProfessional,
     })
 
-    // ── Integração Caixa → Financeiro: grava transação INCOME ────────────────
-    const methodMap: Record<PaymentMethod, 'CASH' | 'PIX' | 'CREDIT' | 'DEBIT' | 'TRANSFER'> = {
+    // ── Efeitos de domínio (Financeiro + Estoque + Comissão + Cupom) ──────────
+    // Centralizados em useSaleCommit — testados como unidade (useSaleCommit.test.ts),
+    // garantindo que o handler dispara TODOS os efeitos, não só alguns.
+    const methodMap: Record<PaymentMethod, TxPaymentMethod> = {
       cash: 'CASH', pix: 'PIX', credit: 'CREDIT', debit: 'DEBIT', split: 'TRANSFER',
     }
     const hasService = cart.value.some(i => i.type === 'service')
     const hasProduct = cart.value.some(i => i.type === 'product')
     const category: 'SERVICE' | 'PRODUCT' | 'SALE' =
       hasService && hasProduct ? 'SALE' : hasService ? 'SERVICE' : 'PRODUCT'
-    addTransaction({
-      date: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      description: `Venda PDV #${saleId} — ${cart.value.map(i => i.name).join(', ')}`,
-      type: 'INCOME',
-      category,
-      amount: total.value,
+    commitSale({
+      saleId,
+      total: total.value,
       paymentMethod: methodMap[selectedPayment.value!],
-      status: 'PAID',
-      clientId: selectedCustomer.value?.id,
-      clientName: selectedCustomer.value?.name,
-      items: cart.value.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+      paymentLabel: PAYMENT_LABELS[selectedPayment.value!],
+      category,
+      customerId: selectedCustomer.value?.id,
+      customerName: selectedCustomer.value?.name,
+      professionalName: saleProfessional !== '—' ? saleProfessional : undefined,
+      couponCode: couponCode.value.trim() || undefined,
       installments: selectedPayment.value === 'credit' ? creditInstallments.value : undefined,
+      items: cart.value.map(i => ({
+        id: i.id, type: i.type, name: i.name, qty: i.qty,
+        lineTotal: itemSubtotal(i), professionalId: i.professionalId || undefined,
+      })),
     })
 
     successModal.value = true
@@ -420,6 +495,7 @@ const newSale = () => {
   customerQuery.value = ''
   selectedPayment.value = null
   globalDiscountValue.value = 0
+  couponCode.value = ''
   observations.value = ''
   observationsOpen.value = false
   cashReceived.value = null
@@ -457,32 +533,35 @@ const formatDuration = (minutes: number) => {
 <template>
   <div data-testid="page-caixa">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-semibold" :style="{ color: 'var(--zima-text-primary)' }">Caixa / PDV</h1>
-        <p class="text-sm mt-0.5" :style="{ color: 'var(--zima-text-muted)' }">Registre vendas de serviços e produtos</p>
-      </div>
-      <div style="display: flex; align-items: center; gap: 8px; padding: 4px; background: var(--zima-bg-surface-2); border-radius: 10px; border: 1px solid var(--zima-border-default);">
-        <button
-          v-for="v in [{ key: 'pdv', label: 'PDV', icon: 'i-lucide-shopping-cart' }, { key: 'historico', label: 'Histórico', icon: 'i-lucide-clock' }]"
-          :key="v.key"
-          style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 120ms;"
-          :style="{
-            background: activeView === v.key ? 'var(--zima-bg-surface-3)' : 'transparent',
-            color: activeView === v.key ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
-          }"
-          @click="activeView = v.key as 'pdv' | 'historico'"
+    <ZimaPageHeader title="Caixa / PDV" description="Registre vendas de serviços e produtos">
+      <template #actions>
+        <div
+          class="flex items-center gap-0.5 p-1 rounded-lg"
+          :style="{ background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)' }"
         >
-          <Icon :name="v.icon" style="width: 14px; height: 14px;" />
-          {{ v.label }}
-        </button>
-      </div>
-    </div>
+          <button
+            v-for="v in [{ key: 'pdv', label: 'PDV', icon: 'i-lucide-shopping-cart' }, { key: 'historico', label: 'Histórico', icon: 'i-lucide-clock' }]"
+            :key="v.key"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+            :style="{
+              background: activeView === v.key ? 'var(--zima-bg-surface-active)' : 'transparent',
+              color: activeView === v.key ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
+              border: 'none', cursor: 'pointer',
+              transitionDuration: 'var(--zima-duration-base)',
+            }"
+            @click="activeView = v.key as 'pdv' | 'historico'"
+          >
+            <Icon :name="v.icon" style="width: 13px; height: 13px;" />
+            {{ v.label }}
+          </button>
+        </div>
+      </template>
+    </ZimaPageHeader>
 
     <!-- ── HISTÓRICO VIEW ─────────────────────────────────────────────────────── -->
     <template v-if="activeView === 'historico'">
       <!-- Filters -->
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 200px;">
           <ZimaInput v-model="histSearch" type="search" placeholder="Buscar por cliente ou profissional..." />
         </div>
@@ -497,22 +576,22 @@ const formatDuration = (minutes: number) => {
       </div>
 
       <!-- KPI row -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">VENDAS HOJE</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #10B981;">{{ formatCurrency(saleHistory.reduce((s, x) => s + x.total, 0)) }}</div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div style="padding: 16px 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 10px;">VENDAS HOJE</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: var(--zima-success);">{{ formatCurrency(saleHistory.reduce((s, x) => s + x.total, 0)) }}</div>
         </div>
-        <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TRANSAÇÕES</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: var(--zima-text-primary);">{{ saleHistory.length }}</div>
+        <div style="padding: 16px 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 10px;">TRANSAÇÕES</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: var(--zima-text-primary);">{{ saleHistory.length }}</div>
         </div>
-        <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TICKET MÉDIO</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: var(--zima-text-primary);">{{ saleHistory.length > 0 ? formatCurrency(saleHistory.reduce((s, x) => s + x.total, 0) / saleHistory.length) : 'R$\xa00,00' }}</div>
+        <div style="padding: 16px 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 10px;">TICKET MÉDIO</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: var(--zima-text-primary);">{{ saleHistory.length > 0 ? formatCurrency(saleHistory.reduce((s, x) => s + x.total, 0) / saleHistory.length) : 'R$\xa00,00' }}</div>
         </div>
-        <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">MAIOR VENDA</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: var(--zima-text-primary);">{{ saleHistory.length > 0 ? formatCurrency(Math.max(...saleHistory.map(s => s.total))) : 'R$\xa00,00' }}</div>
+        <div style="padding: 16px 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 10px;">MAIOR VENDA</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: var(--zima-text-primary);">{{ saleHistory.length > 0 ? formatCurrency(Math.max(...saleHistory.map(s => s.total))) : 'R$\xa00,00' }}</div>
         </div>
       </div>
 
@@ -523,7 +602,7 @@ const formatDuration = (minutes: number) => {
           empty-title="Nenhuma venda registrada" empty-description="As vendas do PDV aparecerão aqui"
           row-clickable @row-click="(r) => histViewSaleId = r.id as string">
           <template #cell-data="{ row }">
-            <span style="font-size: 12px; font-family: 'Geist Mono', monospace; color: var(--zima-text-muted);">{{ row.data }}</span>
+            <span style="font-size: 12px; font-family: var(--zima-font-mono); color: var(--zima-text-muted);">{{ row.data }}</span>
           </template>
           <template #cell-cliente="{ row }">
             <span style="font-size: 13px; font-weight: 500; color: var(--zima-text-primary);">{{ row.cliente }}</span>
@@ -532,7 +611,7 @@ const formatDuration = (minutes: number) => {
             <span style="font-size: 12px; color: var(--zima-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 200px;">{{ row.itens }}</span>
           </template>
           <template #cell-total="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 700; color: #10B981;">{{ formatCurrency(row.total as number) }}</span>
+            <span style="font-family: var(--zima-font-mono); font-size: 14px; font-weight: 700; color: var(--zima-success);">{{ formatCurrency(row.total as number) }}</span>
           </template>
           <template #cell-pagamento="{ row }">
             <ZimaBadge variant="info" size="sm">{{ row.pagamento }}</ZimaBadge>
@@ -541,13 +620,15 @@ const formatDuration = (minutes: number) => {
             <span style="font-size: 12px; color: var(--zima-text-secondary);">{{ row.profissional }}</span>
           </template>
           <template #cell-acoes="{ row }">
-            <div style="display: flex; gap: 4px;" @click.stop>
+            <div style="display: flex; gap: 4px; align-items: center;" @click.stop>
               <button
 style="font-size: 12px; color: var(--zima-blue-core); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
                 @click="histViewSaleId = row.id as string">Ver</button>
+              <ZimaBadge v-if="(row as any).status === 'reversed'" variant="danger" size="sm">Estornada</ZimaBadge>
               <button
-style="font-size: 12px; color: var(--zima-text-muted); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
-                @click="toast.info('Estorno em breve...')">Estornar</button>
+                v-else
+style="font-size: 12px; color: var(--zima-danger); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px;"
+                @click="askReverseSale(row.id as string)">Estornar</button>
             </div>
           </template>
         </ZimaTable>
@@ -560,7 +641,7 @@ style="font-size: 12px; color: var(--zima-text-muted); background: none; border:
             <div style="padding: 14px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-md); border: 1px solid var(--zima-border-default);">
               <div class="flex items-center justify-between mb-2">
                 <span style="font-size: 12px; color: var(--zima-text-muted);">Total</span>
-                <span style="font-family: 'Geist Mono', monospace; font-size: 24px; font-weight: 700; color: #10B981;">{{ formatCurrency(histViewSale.total) }}</span>
+                <span style="font-family: var(--zima-font-mono); font-size: 24px; font-weight: 700; color: var(--zima-success);">{{ formatCurrency(histViewSale.total) }}</span>
               </div>
               <div class="flex items-center justify-between mb-1">
                 <span style="font-size: 12px; color: var(--zima-text-muted);">Data</span>
@@ -586,7 +667,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
                     <div style="font-size: 13px; color: var(--zima-text-primary);">{{ item.name }}</div>
                     <div style="font-size: 11px; color: var(--zima-text-muted);">{{ item.qty }}× {{ formatCurrency(item.price) }}</div>
                   </div>
-                  <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; color: var(--zima-text-primary);">{{ formatCurrency(item.price * item.qty) }}</span>
+                  <span style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600; color: var(--zima-text-primary);">{{ formatCurrency(item.price * item.qty) }}</span>
                 </div>
               </div>
             </div>
@@ -594,11 +675,11 @@ v-for="(item, i) in histViewSale.items" :key="i"
         </template>
         <template #footer>
           <div style="display: flex; gap: 8px; width: 100%;">
-            <ZimaButton variant="ghost" style="flex: 1;" @click="toast.info('Recibo por WhatsApp...')">
+            <ZimaButton variant="ghost" style="flex: 1;" @click="toast.success('Recibo enviado por WhatsApp')">
               <template #icon-left><Icon name="i-lucide-message-circle" style="width: 13px; height: 13px;" /></template>
               WhatsApp
             </ZimaButton>
-            <ZimaButton variant="ghost" style="flex: 1;" @click="toast.info('Recibo por Email...')">
+            <ZimaButton variant="ghost" style="flex: 1;" @click="toast.success('Recibo enviado por Email')">
               <template #icon-left><Icon name="i-lucide-mail" style="width: 13px; height: 13px;" /></template>
               Email
             </ZimaButton>
@@ -608,8 +689,36 @@ v-for="(item, i) in histViewSale.items" :key="i"
       </ZimaDrawer>
     </template>
 
+    <!-- Modal: confirmar estorno -->
+    <ZimaModal v-model="reverseModalOpen" title="Estornar venda" size="sm">
+      <div v-if="reverseTarget" class="flex flex-col gap-3">
+        <p style="font-size: 14px; color: var(--zima-text-secondary); line-height: 1.5;">
+          Estornar a venda de <strong style="color: var(--zima-text-primary);">{{ formatCurrency(reverseTarget.total) }}</strong>
+          para {{ reverseTarget.customerName }}?
+        </p>
+        <div style="padding: 10px 12px; border-radius: var(--zima-radius-md); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); font-size: 12px; color: var(--zima-warning);">
+          Será lançado um estorno no financeiro e os produtos retornarão ao estoque. A venda fica marcada como estornada (auditoria).
+        </div>
+      </div>
+      <template #footer>
+        <ZimaButton variant="ghost" @click="reverseModalOpen = false">Cancelar</ZimaButton>
+        <ZimaButton variant="danger" :loading="reversing" @click="confirmReverseSale">Confirmar estorno</ZimaButton>
+      </template>
+    </ZimaModal>
+
+    <!-- Modal: novo cliente inline -->
+    <ModalCliente v-model="newCustomerModalOpen" :customer="null" @saved="onNewCustomerSaved" />
+
     <!-- 2-panel layout -->
-    <div v-if="activeView === 'pdv'" class="md:grid md:grid-cols-12 flex flex-col gap-0 rounded-xl overflow-hidden" style="min-height: calc(100vh - 180px); border: 1px solid var(--zima-border-default);">
+    <div
+      v-if="activeView === 'pdv'"
+      class="md:grid md:grid-cols-12 flex flex-col gap-0 rounded-xl overflow-hidden"
+      :style="{
+        minHeight: 'calc(100vh - 180px)',
+        border: '1px solid var(--zima-border-default)',
+        paddingBottom: isMobile ? '68px' : '0',
+      }"
+    >
 
       <!-- ── LEFT PANEL (7/12 desktop | full mobile) ───────────────────────── -->
       <div
@@ -692,7 +801,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
                   <span style="font-size: 13px; font-weight: 500; color: var(--zima-text-primary);">{{ svc.name }}</span>
                   <div class="flex items-center justify-between">
                     <span style="font-size: 11px; color: var(--zima-text-muted);">{{ formatDuration(svc.duration) }}</span>
-                    <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; color: var(--zima-blue-core);">
+                    <span style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600; color: var(--zima-blue-core);">
                       {{ formatCurrency(svc.price) }}
                     </span>
                   </div>
@@ -734,7 +843,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
 
               <span style="font-size: 12px; color: var(--zima-text-muted);">{{ prod.category }}</span>
               <span style="font-size: 13px; font-weight: 500; color: var(--zima-text-primary);">{{ prod.name }}</span>
-              <span style="font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 600; color: var(--zima-blue-core);">
+              <span style="font-family: var(--zima-font-mono); font-size: 14px; font-weight: 600; color: var(--zima-blue-core);">
                 {{ formatCurrency(prod.price) }}
               </span>
             </button>
@@ -747,7 +856,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
         v-show="!isMobile || pdvView === 'cart'"
         class="md:col-span-5 flex flex-col"
         :class="isMobile ? 'flex-1' : ''"
-        style="background: #111520;"
+        style="background: var(--zima-bg-surface-2);"
       >
 
         <!-- Customer + Professional -->
@@ -765,7 +874,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
               <button
                 class="mt-1.5 text-xs"
                 style="background: none; border: none; cursor: pointer; color: var(--zima-blue-core); padding: 0;"
-                @click="toast.info('Cadastro de cliente em breve')"
+                @click="openNewCustomer"
               >
                 + Novo cliente
               </button>
@@ -867,7 +976,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
                 <div class="flex-1" />
 
                 <!-- Item subtotal -->
-                <span style="font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 600; color: var(--zima-text-primary);">
+                <span style="font-family: var(--zima-font-mono); font-size: 14px; font-weight: 600; color: var(--zima-text-primary);">
                   {{ formatCurrency(itemSubtotal(item)) }}
                 </span>
               </div>
@@ -932,7 +1041,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
           <div class="flex flex-col gap-2">
             <div class="flex items-center justify-between">
               <span style="font-size: 13px; color: var(--zima-text-muted);">Subtotal</span>
-              <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-secondary);">
+              <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-secondary);">
                 {{ formatCurrency(subtotal) }}
               </span>
             </div>
@@ -969,16 +1078,33 @@ v-for="(item, i) in histViewSale.items" :key="i"
                     width: 64px; background: rgba(255,255,255,0.04);
                     border: 1px solid rgba(148,163,184,0.12);
                     color: var(--zima-text-primary); font-size: 12px; outline: none;
-                    font-family: 'Geist Mono', monospace;
+                    font-family: var(--zima-font-mono);
                   "
                 >
               </div>
               <span
                 v-if="discount > 0"
-                style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-success);"
+                style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-success);"
               >
                 -{{ formatCurrency(discount) }}
               </span>
+            </div>
+
+            <!-- Cupom de campanha -->
+            <div class="flex items-center gap-2">
+              <span style="font-size: 13px; color: var(--zima-text-muted); white-space: nowrap;">Cupom</span>
+              <input
+                v-model="couponCode"
+                type="text"
+                placeholder="Código (ex.: ABRIL20)"
+                class="rounded px-2 py-0.5 ml-auto"
+                style="
+                  width: 150px; background: rgba(255,255,255,0.04);
+                  border: 1px solid rgba(148,163,184,0.12);
+                  color: var(--zima-text-primary); font-size: 12px; outline: none;
+                  text-transform: uppercase; font-family: var(--zima-font-mono);
+                "
+              >
             </div>
 
             <!-- Total -->
@@ -987,7 +1113,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
               style="border-top: 1px solid rgba(148,163,184,0.12);"
             >
               <span style="font-size: 15px; font-weight: 600; color: var(--zima-text-primary);">Total</span>
-              <span style="font-family: 'Geist Mono', monospace; font-size: 24px; font-weight: 700; color: var(--zima-text-primary);">
+              <span style="font-family: var(--zima-font-mono); font-size: 24px; font-weight: 700; color: var(--zima-text-primary);">
                 {{ formatCurrency(total) }}
               </span>
             </div>
@@ -1025,12 +1151,12 @@ v-for="(item, i) in histViewSale.items" :key="i"
                   min="0"
                   :placeholder="formatCurrency(total)"
                   class="flex-1 rounded-lg px-2 py-1.5"
-                  style="background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12); color: var(--zima-text-primary); font-size: 13px; outline: none; font-family: 'Geist Mono', monospace;"
+                  style="background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12); color: var(--zima-text-primary); font-size: 13px; outline: none; font-family: var(--zima-font-mono);"
                 >
               </div>
               <div v-if="cashReceived !== null" class="flex items-center justify-between">
                 <span v-if="cashChange !== null && cashChange >= 0" style="font-size: 13px; color: var(--zima-text-muted);">Troco</span>
-                <span v-if="cashChange !== null && cashChange >= 0" style="font-family: 'Geist Mono', monospace; font-size: 16px; font-weight: 700; color: #10B981;">{{ formatCurrency(cashChange) }}</span>
+                <span v-if="cashChange !== null && cashChange >= 0" style="font-family: var(--zima-font-mono); font-size: 16px; font-weight: 700; color: var(--zima-success);">{{ formatCurrency(cashChange) }}</span>
                 <span v-else style="font-size: 12px; color: #EF4444;">Valor insuficiente</span>
               </div>
             </div>
@@ -1065,7 +1191,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
                   min="0"
                   placeholder="R$"
                   class="rounded-lg px-2 py-2"
-                  style="width: 90px; background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12); color: var(--zima-text-primary); font-size: 13px; outline: none; font-family: 'Geist Mono', monospace;"
+                  style="width: 90px; background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.12); color: var(--zima-text-primary); font-size: 13px; outline: none; font-family: var(--zima-font-mono);"
                 >
                 <button v-if="splitEntries.length > 2" style="background: none; border: none; cursor: pointer; color: var(--zima-text-muted); padding: 4px;" @click="removeSplitEntry(i)">
                   <Icon name="i-lucide-x" style="width: 13px; height: 13px;" />
@@ -1107,6 +1233,15 @@ v-for="(item, i) in histViewSale.items" :key="i"
             />
           </div>
 
+          <!-- Aviso: serviço sem profissional -->
+          <div
+            v-if="servicesMissingProfessional.length > 0"
+            style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--zima-radius-md); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); font-size: 12px; color: var(--zima-warning);"
+          >
+            <Icon name="i-lucide-alert-triangle" style="width: 14px; height: 14px; flex-shrink: 0;" />
+            <span>Selecione o profissional responsável por cada serviço para registrar a comissão.</span>
+          </div>
+
           <!-- Finalize button -->
           <ZimaButton
             size="lg"
@@ -1128,7 +1263,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
         v-if="isMobile"
         style="
           position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
-          display: flex; background: #111520;
+          display: flex; background: var(--zima-bg-surface-2);
           border-top: 1px solid rgba(148,163,184,0.12);
           padding-bottom: env(safe-area-inset-bottom, 0px);
         "
@@ -1191,7 +1326,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
         >
           <div class="flex items-center justify-between">
             <span style="font-size: 12px; color: var(--zima-text-muted);">Total</span>
-            <span style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: var(--zima-success);">
+            <span style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: var(--zima-success);">
               {{ formatCurrency(lastSaleData.total) }}
             </span>
           </div>
@@ -1244,7 +1379,7 @@ v-for="(item, i) in histViewSale.items" :key="i"
           <button
             class="w-full flex items-center gap-3 rounded-lg px-4 py-3 transition-all"
             style="border: 1px solid rgba(148,163,184,0.12); background: rgba(255,255,255,0.03); cursor: pointer; text-align: left;"
-            @click="toast.info('Módulo de NF em breve...'); navigateTo('/saas/notas')"
+            @click="navigateTo('/saas/notas?tab=nfse')"
             @mouseenter="($event.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'"
             @mouseleave="($event.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'"
           >

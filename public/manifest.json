@@ -1,0 +1,17 @@
+{
+  "name": "Zima",
+  "short_name": "Zima",
+  "description": "Gestão completa para salões, clínicas e cuidados",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07090E",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/logo-capa-com-fundo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

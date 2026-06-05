@@ -7,6 +7,22 @@ const toast = useZimaToast()
 const route = useRoute()
 const router = useRouter()
 
+// ── Upload de certificado digital A1 (preview local) ──────────────────────────
+const certInput = ref<HTMLInputElement | null>(null)
+const certFileName = ref<string | null>(null)
+const triggerCertUpload = () => certInput.value?.click()
+const onCertSelected = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const okExt = /\.(pfx|p12)$/i.test(file.name)
+  if (!okExt) {
+    toast.error('Formato inválido', 'O certificado deve ser .pfx ou .p12.')
+    return
+  }
+  certFileName.value = file.name
+  toast.success('Certificado carregado', `${file.name} — informe a senha para validar.`)
+}
+
 // ── Composables ───────────────────────────────────────────────────────────────
 
 const {
@@ -515,43 +531,21 @@ const sectionCard = {
 <template>
   <div>
     <!-- Header -->
-    <div class="flex items-start justify-between gap-3 flex-wrap mb-6">
-      <div>
-        <h1 :style="{ fontSize: '24px', fontWeight: '600', color: 'var(--zima-text-primary)', marginBottom: '4px' }">
-          Notas Fiscais
-        </h1>
-        <p :style="{ fontSize: '14px', color: 'var(--zima-text-muted)' }">
-          Emissão e gestão de NFS-e e NF-e
-        </p>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap">
+    <ZimaPageHeader title="Notas Fiscais" description="Emissão e gestão de NFS-e e NF-e">
+      <template #actions>
         <ZimaButton variant="ghost" size="sm" @click="openNfe">
-          <Icon name="i-lucide-file-plus" style="width:14px;height:14px;margin-right:6px;" />
-          + Emitir NF-e
+          <template #icon-left><Icon name="i-lucide-file-plus" style="width:14px;height:14px;" /></template>
+          Emitir NF-e
         </ZimaButton>
         <ZimaButton size="sm" @click="openNfse()">
-          <Icon name="i-lucide-file-plus" style="width:14px;height:14px;margin-right:6px;" />
-          + Emitir NFS-e
+          <template #icon-left><Icon name="i-lucide-file-plus" style="width:14px;height:14px;" /></template>
+          Emitir NFS-e
         </ZimaButton>
-      </div>
-    </div>
-
-    <!-- Sub-tabs -->
-    <div class="overflow-x-auto hide-scrollbar" style="border-bottom: 1px solid var(--zima-border-divider); display: flex; gap: 4px; margin-bottom: 24px;">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        style="padding: 10px 16px; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 150ms; white-space: nowrap;"
-        :style="{
-          color: activeTab === tab.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
-          borderBottomColor: activeTab === tab.key ? 'var(--zima-blue-core)' : 'transparent',
-          marginBottom: '-1px',
-        }"
-        @click="activeTab = tab.key"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
+      </template>
+      <template #tabs>
+        <ZimaSubTabs v-model="activeTab" :tabs="tabs" />
+      </template>
+    </ZimaPageHeader>
 
     <!-- ══════════════════════════════════════════════════════════════ -->
     <!-- TABS: Todas | NFS-e | NF-e -->
@@ -887,13 +881,14 @@ const sectionCard = {
             marginBottom: '16px',
             cursor: 'pointer',
           }"
-          @click="toast.info('Upload de certificado em breve!')"
+          @click="triggerCertUpload"
         >
-          <Icon name="i-lucide-upload-cloud" style="width:32px;height:32px;opacity:0.4;" />
-          <p :style="{ fontSize: '14px', fontWeight: '500', color: 'var(--zima-text-primary)' }">Carregar certificado A1</p>
-          <p :style="{ fontSize: '13px', color: 'var(--zima-text-muted)' }">Arraste e solte o arquivo .pfx ou .p12 aqui</p>
-          <p :style="{ fontSize: '12px', color: 'var(--zima-text-muted)' }">Formato: .pfx ou .p12</p>
+          <Icon :name="certFileName ? 'i-lucide-file-check-2' : 'i-lucide-upload-cloud'" :style="{ width:'32px', height:'32px', opacity: certFileName ? '1' : '0.4', color: certFileName ? 'var(--zima-success)' : 'var(--zima-text-muted)' }" />
+          <p :style="{ fontSize: '14px', fontWeight: '500', color: 'var(--zima-text-primary)' }">{{ certFileName || 'Carregar certificado A1' }}</p>
+          <p v-if="!certFileName" :style="{ fontSize: '13px', color: 'var(--zima-text-muted)' }">Clique para selecionar o arquivo .pfx ou .p12</p>
+          <p :style="{ fontSize: '12px', color: certFileName ? 'var(--zima-success)' : 'var(--zima-text-muted)' }">{{ certFileName ? 'Arquivo carregado — informe a senha abaixo' : 'Formato: .pfx ou .p12' }}</p>
         </div>
+        <input ref="certInput" type="file" accept=".pfx,.p12" hidden @change="onCertSelected" >
 
         <div class="flex items-end gap-3">
           <div style="flex:1">

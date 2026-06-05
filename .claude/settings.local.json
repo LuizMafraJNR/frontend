@@ -6,7 +6,17 @@
       "Bash(awk '/^C:\\\\\\\\/ { file=$0 } /error/ { print file \" :: \" $0 }')",
       "Bash(awk 'BEGIN{f=\"\"} /^C:/ {f=$0; next} /error/ {print f \":\" $0}')",
       "Bash(\\\\.ts)",
-      "Bash(\\\\.js\")"
+      "Bash(\\\\.js\")",
+      "PowerShell(cd 'C:\\\\IM.AI\\\\Projetos\\\\Projeto Cuidados\\\\Desenvolvimento\\\\Frontend\\\\cuidados-frontend'; Get-ChildItem -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'saas|layout|sidebar' } | Select-Object -First 20)",
+      "Bash(Get-ChildItem -Recurse -File -Filter \"*.vue\")",
+      "Bash(Select-String -Pattern \"badge:\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(Get-ChildItem *)",
+      "Bash(copy \"C:\\\\IM.AI\\\\Projetos\\\\Projeto Cuidados\\\\Desenvolvimento\\\\Frontend\\\\cuidados-frontend\\\\logo-capa-sem-fundo.png\" \"C:\\\\IM.AI\\\\Projetos\\\\Projeto Cuidados\\\\Desenvolvimento\\\\Frontend\\\\cuidados-frontend\\\\public\\\\logo-capa-sem-fundo.png\")",
+      "Bash(copy \"C:\\\\IM.AI\\\\Projetos\\\\Projeto Cuidados\\\\Desenvolvimento\\\\Frontend\\\\cuidados-frontend\\\\logo-capa-com-fundo.png\" \"C:\\\\IM.AI\\\\Projetos\\\\Projeto Cuidados\\\\Desenvolvimento\\\\Frontend\\\\cuidados-frontend\\\\public\\\\logo-capa-com-fundo.png\")",
+      "Bash(npm list *)",
+      "Bash(npm outdated *)",
+      "WebSearch"
     ]
   }
 }

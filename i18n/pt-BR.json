@@ -70,5 +70,226 @@
       "cancelled": "Cancelado",
       "completed": "Concluído"
     }
+  },
+  "landing": {
+    "nav": {
+      "features": "Funcionalidades",
+      "pricing": "Planos",
+      "compare": "Comparar",
+      "faq": "FAQ",
+      "signin": "Entrar",
+      "start": "Entrar na lista"
+    },
+    "hero": {
+      "eyebrow": "Zima Plataforma · Beta fechado",
+      "titleA": "Toda a operação do seu negócio.\nEm um lugar só.",
+      "titleB": "Gestão completa.\nInteligência integrada.\nBrasileiro.",
+      "titleC": "Seu negócio inteiro.\nEm uma plataforma.",
+      "sub": "Agenda, clientes, financeiro, estoque, nota fiscal, IA para atendimento e campanhas — para salões, clínicas de estética, petshops e estúdios. Feito no Brasil.",
+      "ctaPrimary": "Quero acesso antecipado",
+      "ctaSecondary": "Ver como funciona",
+      "notice": "Beta fechado · Vagas limitadas · Lançamento em breve",
+      "tabs": {
+        "agenda": "Agenda",
+        "inbox": "Atendimento IA",
+        "pdv": "PDV",
+        "dre": "Financeiro"
+      }
+    },
+    "trusted": "Em breve · histórias de clientes em produção",
+    "problem": {
+      "eyebrow": "O problema",
+      "title": "Você ainda gerencia seu negócio assim?",
+      "sub": "A maioria dos salões e clínicas opera com 5 ferramentas desconectadas. O resultado é trabalho dobrado, faturamento perdido e nenhuma visão do lucro real.",
+      "items": [
+        { "t": "Agenda no WhatsApp", "d": "Sem confirmação automática. No-shows acontecem todo dia.", "bad": "No-show" },
+        { "t": "Financeiro no caderno", "d": "Você sabe quanto faturou — mas não quanto lucrou.", "bad": "Sem visibilidade" },
+        { "t": "Estoque na cabeça", "d": "Produto acabou. Cliente esperando. Cadê o fornecedor?", "bad": "Falta de produto" },
+        { "t": "Marketing no improviso", "d": "Posts soltos no Instagram, sem segmentação nem métrica.", "bad": "Sem conversão" },
+        { "t": "Atendimento até 23h", "d": "Mensagens chegando fora do horário. Você responde no sofá.", "bad": "Burnout" },
+        { "t": "3+ sistemas que não conversam", "d": "Agenda num lugar, financeiro em outro, nota em um terceiro.", "bad": "Retrabalho" }
+      ]
+    },
+    "solution": {
+      "eyebrow": "A solução",
+      "title": "Uma plataforma. Catorze módulos.\nUm fluxo só.",
+      "sub": "Uma venda no PDV registra automaticamente a receita, calcula a comissão, baixa o estoque, emite a nota fiscal e atualiza o DRE. Sem planilhas. Sem dupla digitação. Sem exceções.",
+      "flow": [
+        "Cliente agenda online",
+        "IA confirma no WhatsApp",
+        "Profissional executa",
+        "PDV finaliza a venda",
+        "Estoque · Comissão · NFS-e · DRE"
+      ],
+      "footAuto": "Automático",
+      "footDesc": "Tudo conectado em tempo real — sem integrações externas, sem código.",
+      "footModules": "14 módulos integrados",
+      "footDb": "1 base de dados",
+      "footSheets": "0 planilhas"
+    },
+    "features": {
+      "eyebrow": "Funcionalidades",
+      "title": "Tudo que você precisa.\nNada que você não precisa.",
+      "sub": "Catorze módulos integrados que substituem agendamento, CRM, ERP, atendimento, marketing e fiscal — sem orquestração externa.",
+      "preview": "Pré-visualização ao vivo",
+      "items": [
+        { "k": "agenda", "t": "Agenda Inteligente", "d": "Visualização por dia, semana ou lista. Confirmações automáticas pelo WhatsApp. Status em tempo real." },
+        { "k": "ia",     "t": "IA & Automação",     "d": "Agente de IA configurável para atendimento 24/7. Base de conhecimento, fluxos visuais, transferência inteligente." },
+        { "k": "inbox",  "t": "Inbox Multi-canal",  "d": "WhatsApp, Instagram e Webchat em uma única caixa de entrada. Agendamento direto do chat." },
+        { "k": "pdv",    "t": "PDV Integrado",      "d": "Uma venda alimenta financeiro, comissão e estoque automaticamente. PIX, cartão e dinheiro." },
+        { "k": "fin",    "t": "Financeiro com DRE", "d": "Receitas, despesas, contas a pagar/receber e DRE completo. Sempre atualizado, não só no fim do mês." },
+        { "k": "stock",  "t": "Gestão de Estoque",  "d": "SKU, variações, fornecedores e movimentações rastreadas. Alertas de reposição automáticos." },
+        { "k": "camp",   "t": "Campanhas de Marketing", "d": "Segmentação visual, editor com variáveis, agendamento e métricas de conversão." },
+        { "k": "nf",     "t": "Notas Fiscais",      "d": "NFS-e e NF-e emitidas direto na plataforma. Configuração de regime tributário, envio automático." }
+      ]
+    },
+    "diff": {
+      "eyebrow": "Diferenciais",
+      "title": "Por que Zima\ne não outra coisa",
+      "items": [
+        { "t": "IA nativa para atendimento", "d": "Não é uma integração externa. O agente foi desenhado dentro da plataforma — entende seu catálogo, sua agenda, suas regras." },
+        { "t": "DRE em tempo real", "d": "O Demonstrativo do Resultado é recalculado a cada venda. Você abre o app à meia-noite e vê o lucro do dia." },
+        { "t": "PDV → Estoque → Fiscal → Financeiro", "d": "Uma operação no caixa dispara quatro atualizações. Zero configuração extra." },
+        { "t": "Pensado para o Brasil", "d": "NFS-e municipal, PIX nativo, WhatsApp Business API, regime tributário do Simples ao Lucro Real." },
+        { "t": "Design enterprise moderno", "d": "Sua equipe vai querer abrir o sistema. Seu cliente vai notar a diferença. Sua marca sobe um nível." },
+        { "t": "Comando rápido (Ctrl K)", "d": "Navegue o sistema inteiro sem tirar as mãos do teclado. Cada ação a um atalho." }
+      ]
+    },
+    "compare": {
+      "eyebrow": "Comparação",
+      "title": "Zima vs. o resto do mercado",
+      "sub": "Concorrentes resolvem pedaços do problema. Zima é o único que une agenda, fiscal, IA e financeiro.",
+      "legendYes": "Incluído",
+      "legendBasic": "Básico",
+      "legendNo": "Não disponível",
+      "feature": "Funcionalidade",
+      "bestChoice": "Melhor escolha",
+      "rows": [
+        ["Agenda online", true, true, true, true, false, true],
+        ["PDV integrado", true, false, true, true, true, false],
+        ["IA para atendimento", true, false, false, false, false, false],
+        ["Inbox multi-canal", true, false, false, false, false, false],
+        ["Campanhas de marketing", true, "Básico", "Básico", false, false, false],
+        ["Gestão de estoque", true, false, true, true, true, false],
+        ["Nota fiscal integrada", true, false, false, false, true, false],
+        ["DRE completo", true, false, false, false, true, false],
+        ["Comissões automáticas", true, false, true, true, false, true],
+        ["Design moderno", "★★", "★", false, "★", false, false],
+        ["Foco mercado BR", true, true, false, true, true, true]
+      ]
+    },
+    "testi": {
+      "eyebrow": "Em breve",
+      "title": "Histórias de clientes em produção",
+      "sub": "Estamos rodando piloto com proprietárias e gestores em Joinville e região. Os primeiros depoimentos serão publicados em breve.",
+      "cta": "Entrar na lista de espera",
+      "soon": "Em breve · piloto"
+    },
+    "pricing": {
+      "eyebrow": "Planos e preços",
+      "title": "Previsão de preços para o lançamento.",
+      "sub": "Valores planejados para quando abrirmos. Inscreva-se agora para garantir condições especiais de fundador.",
+      "monthly": "Mensal",
+      "yearly": "Anual",
+      "save": "Economize 20%",
+      "cta": "Reservar vaga",
+      "ctaEnterprise": "Falar com vendas",
+      "perMonth": "/mês",
+      "popular": "Mais popular",
+      "consultation": "Sob consulta",
+      "yearly_note": "cobrado anualmente",
+      "cancel_note": "cancele quando quiser",
+      "tiers": [
+        {
+          "k": "starter",
+          "t": "Starter",
+          "d": "Para o profissional independente que quer profissionalizar.",
+          "price": { "m": 79, "y": 63 },
+          "popular": false,
+          "features": ["Agenda inteligente", "CRM de clientes (até 500)", "PDV básico", "1 usuário", "WhatsApp manual"]
+        },
+        {
+          "k": "pro",
+          "t": "Profissional",
+          "d": "Para salões e clínicas em crescimento, com equipe.",
+          "price": { "m": 189, "y": 151 },
+          "popular": true,
+          "features": ["Tudo do Starter, sem limite", "Equipe ilimitada · comissões", "Estoque + fornecedores", "NFS-e + NF-e ilimitadas", "Inbox multi-canal", "Campanhas de marketing"]
+        },
+        {
+          "k": "ent",
+          "t": "Enterprise",
+          "d": "Para redes, franquias e operações multi-unidade.",
+          "price": null,
+          "popular": false,
+          "features": ["Tudo do Profissional", "IA & Automação 24/7", "Multi-unidade consolidada", "DRE por unidade", "API + integrações custom", "Gerente de conta dedicado"]
+        }
+      ]
+    },
+    "integ": {
+      "eyebrow": "Integrações",
+      "title": "Conectado com tudo\nque você já usa",
+      "sub": "Pagamentos, calendários, WhatsApp Business, fiscal municipal, contabilidade. Plug and play."
+    },
+    "faq": {
+      "eyebrow": "Perguntas frequentes",
+      "title": "Dúvidas honestas,\nrespostas honestas",
+      "contact": "Falta alguma resposta? Fale com nosso time — respondemos em até 1 hora útil.",
+      "contactBtn": "Falar com humano",
+      "items": [
+        ["Quando o Zima vai lançar?", "Estamos em beta fechado com um grupo seleto de parceiros. A previsão de lançamento público é para o segundo semestre de 2025. Inscreva-se na lista de espera para ser notificado em primeira mão."],
+        ["E se eu já uso outro sistema? Como migro?", "Importamos clientes, agenda e catálogo de planilha ou diretamente de Booksy, Trinks, Mindbody e iGestão. Nosso time faz a migração junto com você, sem custo."],
+        ["A nota fiscal funciona na minha cidade?", "NFS-e está homologada em mais de 4.500 municípios brasileiros, incluindo todas as capitais. Se sua cidade ainda não estiver, integramos em até 5 dias úteis."],
+        ["Funciona no celular?", "Sim. Toda a plataforma é responsiva e há aplicativo nativo iOS e Android para você operar agenda, PDV e atendimento de qualquer lugar."],
+        ["E se minha equipe é pequena? Vale a pena?", "O plano Starter foi desenhado para profissionais sozinhos. A partir de R$ 79/mês você já tem agenda profissional, CRM e PDV — mais barato que perder 1 cliente por mês por no-show."],
+        ["Como funciona a IA de atendimento?", "Você configura nome, tom de voz e base de conhecimento. A IA responde no WhatsApp, agenda, confirma e transfere para humano quando necessário. Treinada com casos do setor de beleza."],
+        ["Meus dados ficam seguros?", "Conformidade LGPD, criptografia em repouso e em trânsito, backups diários, certificação ISO 27001 em andamento. Você é dono dos seus dados — exportação em CSV a qualquer momento."]
+      ]
+    },
+    "cta": {
+      "eyebrow": "Garanta sua vaga",
+      "title": "Seu negócio merece mais.\nSeja um dos primeiros.",
+      "sub": "Beta fechado com acesso antecipado e preço especial para os primeiros usuários."
+    },
+    "waitlist": {
+      "eyebrow": "Acesso antecipado · Beta fechado",
+      "title": "Seja um dos primeiros\na usar o Zima.",
+      "sub": "Estamos em beta fechado. Cadastre-se para entrar na fila e receber atualizações sobre o lançamento assim que estiver disponível.",
+      "perks": [
+        "Acesso antes do lançamento público",
+        "Preço especial para fundadores",
+        "Onboarding guiado com a equipe Zima",
+        "Canal direto para feedbacks e sugestões"
+      ],
+      "counter": "pessoas já na lista de espera",
+      "namePlaceholder": "Seu nome",
+      "nameLabel": "Nome completo",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "seu@email.com",
+      "whatsappLabel": "WhatsApp",
+      "whatsappPlaceholder": "(47) 99999-9999",
+      "optional": "opcional",
+      "submit": "Entrar na lista de espera",
+      "privacy": "Sem spam. Seus dados ficam só com a gente.",
+      "successTitle": "Você está na lista!",
+      "successText": "Avisaremos assim que o Zima estiver disponível para você. Fique de olho no e-mail e no WhatsApp.",
+      "position": "Posição na fila:"
+    },
+    "foot": {
+      "tag": "Tudo que o seu negócio precisa. Em um lugar só.",
+      "product": "Produto",
+      "company": "Empresa",
+      "resources": "Recursos",
+      "legal": "Legal",
+      "rights": "© 2026 Zima Tecnologia · Feito em Joinville, SC",
+      "statusOnline": "Todos os sistemas operando",
+      "productLinks": ["Funcionalidades", "Planos", "Integrações", "Roadmap", "Mudanças"],
+      "companyLinks": ["Sobre", "Carreiras", "Blog", "Imprensa", "Contato"],
+      "resourcesLinks": ["Documentação", "API", "Status", "Comunidade", "Migração"],
+      "legalLinks": ["Termos", "Privacidade", "Segurança", "LGPD", "Cookies"],
+      "tagline": "Beleza, estética e cuidados"
+    },
+    "themeLight": "Mudar para claro",
+    "themeDark": "Mudar para escuro"
   }
 }

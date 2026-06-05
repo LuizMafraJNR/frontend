@@ -147,18 +147,20 @@ const MOCK_BLOCKOUTS: Blockout[] = [
   { id: 'blk-2', professionalId: 'pro-1', startDate: '2026-04-10', endDate: '2026-04-10', reason: 'Consulta médica' },
 ]
 
-export const useProfessionals = () => {
-  const professionals = ref<Professional[]>([])
-  const schedules = ref<WorkSchedule[]>([])
-  const blockouts = ref<Blockout[]>([])
-  const loading = ref(false)
+// ── Estado singleton (persistido — SSR-safe) ────────────────────────────────────
+const professionals = persistedRef<Professional[]>('professionals:list', () => MOCK_PROFESSIONALS.map(p => ({ ...p })))
+const schedules = persistedRef<WorkSchedule[]>('professionals:schedules', () => MOCK_SCHEDULES.map(s => ({ ...s, days: s.days.map(d => ({ ...d })) })))
+const blockouts = persistedRef<Blockout[]>('professionals:blockouts', () => MOCK_BLOCKOUTS.map(b => ({ ...b })))
+const loading = ref(false)
+const initialized = ref(false)
 
+export const useProfessionals = () => {
   const fetchAll = async () => {
+    if (initialized.value) return
     loading.value = true
     await new Promise(r => setTimeout(r, 400))
-    professionals.value = MOCK_PROFESSIONALS.map(p => ({ ...p }))
-    schedules.value = MOCK_SCHEDULES.map(s => ({ ...s, days: s.days.map(d => ({ ...d })) }))
-    blockouts.value = MOCK_BLOCKOUTS.map(b => ({ ...b }))
+    // Não re-seeda: persistedRef já hidratou (seed ou localStorage).
+    initialized.value = true
     loading.value = false
   }
 

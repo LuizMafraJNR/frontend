@@ -6,6 +6,24 @@ definePageMeta({ layout: 'saas' })
 const toast = useZimaToast()
 const route = useRoute()
 const router = useRouter()
+const { downloadCsv, num, dateSuffix } = useCsvExport()
+
+// ── Ações em lote (produtos selecionados) ─────────────────────────────────────
+const batchDeactivate = (selected: Product[]) => {
+  const ativos = selected.filter(p => p.active)
+  if (!ativos.length) { toast.info('Nenhum produto ativo na seleção'); return }
+  ativos.forEach(p => toggleProductActive(p.id))
+  toast.success(`${ativos.length} produto(s) desativado(s)`)
+}
+const batchExport = (selected: Product[]) => {
+  if (!selected.length) return
+  downloadCsv(
+    `produtos-${dateSuffix()}.csv`,
+    ['SKU', 'Nome', 'Marca', 'Estoque', 'Mínimo', 'Custo (R$)', 'Venda (R$)', 'Ativo'],
+    selected.map(p => [p.sku, p.name, p.brand ?? '', p.stock, p.minStock, num(p.costPrice), num(p.salePrice), p.active ? 'Sim' : 'Não']),
+  )
+  toast.success(`${selected.length} produto(s) exportado(s)`)
+}
 
 // ── Composable ────────────────────────────────────────────────────────────────
 
@@ -51,9 +69,9 @@ const stockBarWidth = (p: Product) => {
   return Math.min(100, (p.stock / (p.minStock * 2)) * 100)
 }
 const stockBarColor = (p: Product) => {
-  if (p.stock === 0) return '#EF4444'
-  if (p.stock <= p.minStock) return '#F59E0B'
-  return '#10B981'
+  if (p.stock === 0) return 'var(--zima-danger)'
+  if (p.stock <= p.minStock) return 'var(--zima-warning)'
+  return 'var(--zima-success)'
 }
 const stockStatus = (p: Product) => {
   if (!p.active) return { label: 'Inativo', variant: 'neutral' as const }
@@ -231,6 +249,25 @@ const defaultProductForm = (): ProductForm => ({
 const productForm = ref<ProductForm>(defaultProductForm())
 const editingProductId = ref<string | null>(null)
 
+// ── Upload de foto do produto (preview local) ─────────────────────────────────
+const productImageInput = ref<HTMLInputElement | null>(null)
+const productImagePreview = ref<string | null>(null)
+const triggerProductImage = () => productImageInput.value?.click()
+const onProductImageSelected = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    toast.error('Selecione um arquivo de imagem')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    productImagePreview.value = reader.result as string
+    toast.success('Foto adicionada', file.name)
+  }
+  reader.readAsDataURL(file)
+}
+
 const liveMargem = computed(() => {
   const custo = productForm.value.costPrice ?? 0
   const venda = productForm.value.salePrice ?? 0
@@ -241,15 +278,15 @@ const liveMargem = computed(() => {
 const liveMargemColor = computed(() => {
   const m = liveMargem.value
   if (m === null) return 'var(--zima-text-muted)'
-  if (m >= 30) return '#10B981'
-  if (m >= 15) return '#F59E0B'
-  return '#EF4444'
+  if (m >= 30) return 'var(--zima-success)'
+  if (m >= 15) return 'var(--zima-warning)'
+  return 'var(--zima-danger)'
 })
 
 const margemColor = (pct: number) => {
-  if (pct >= 30) return '#10B981'
-  if (pct >= 15) return '#F59E0B'
-  return '#EF4444'
+  if (pct >= 30) return 'var(--zima-success)'
+  if (pct >= 15) return 'var(--zima-warning)'
+  return 'var(--zima-danger)'
 }
 
 const generateSku = () => {
@@ -551,10 +588,10 @@ const movRows = computed(() =>
 )
 
 const movTypeConfig: Record<MovementType, { label: string; color: string; icon: string }> = {
-  ENTRY: { label: 'Entrada', color: '#10B981', icon: 'i-lucide-arrow-down-circle' },
-  EXIT: { label: 'Saída', color: '#EF4444', icon: 'i-lucide-arrow-up-circle' },
+  ENTRY: { label: 'Entrada', color: 'var(--zima-success)', icon: 'i-lucide-arrow-down-circle' },
+  EXIT: { label: 'Saída', color: 'var(--zima-danger)', icon: 'i-lucide-arrow-up-circle' },
   ADJUSTMENT: { label: 'Ajuste', color: '#3B82F6', icon: 'i-lucide-sliders' },
-  LOSS: { label: 'Perda', color: '#F59E0B', icon: 'i-lucide-alert-triangle' },
+  LOSS: { label: 'Perda', color: 'var(--zima-warning)', icon: 'i-lucide-alert-triangle' },
   RETURN: { label: 'Devolução', color: '#8B5CF6', icon: 'i-lucide-undo-2' },
 }
 
@@ -744,54 +781,33 @@ const exportProductsCSV = () => {
 <template>
   <div>
     <!-- Header -->
-    <div class="flex items-start justify-between mb-6">
-      <div>
-        <h1 :style="{ fontSize: '24px', fontWeight: '600', color: 'var(--zima-text-primary)', marginBottom: '4px' }">
-          Estoque e Produtos
-        </h1>
-        <p :style="{ fontSize: '14px', color: 'var(--zima-text-muted)' }">
-          Gerencie produtos, entradas e movimentações de estoque
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
+    <ZimaPageHeader title="Estoque" description="Gerencie produtos, entradas e movimentações de estoque">
+      <template #actions>
         <ZimaButton variant="ghost" size="sm" @click="openAdjust()">
-          <Icon name="i-lucide-sliders" style="width:14px;height:14px;margin-right:6px;" />
-          Ajuste de Estoque
+          <template #icon-left><Icon name="i-lucide-sliders" style="width:14px;height:14px;" /></template>
+          Ajuste
         </ZimaButton>
         <ZimaButton variant="ghost" size="sm" @click="openEntry()">
-          <Icon name="i-lucide-truck" style="width:14px;height:14px;margin-right:6px;" />
-          Entrada de Mercadoria
+          <template #icon-left><Icon name="i-lucide-truck" style="width:14px;height:14px;" /></template>
+          Entrada
         </ZimaButton>
         <ZimaButton size="sm" @click="openNewProduct()">
-          <Icon name="i-lucide-plus" style="width:14px;height:14px;margin-right:6px;" />
+          <template #icon-left><Icon name="i-lucide-plus" style="width:14px;height:14px;" /></template>
           Novo Produto
         </ZimaButton>
-      </div>
-    </div>
-
-    <!-- Sub-tabs -->
-    <div style="border-bottom: 1px solid var(--zima-border-divider); display: flex; gap: 4px; margin-bottom: 24px;">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        style="padding: 10px 16px; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 150ms; white-space: nowrap; display: flex; align-items: center; gap: 6px;"
-        :style="{
-          color: activeTab === tab.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
-          borderBottomColor: activeTab === tab.key ? 'var(--zima-blue-core)' : 'transparent',
-          marginBottom: '-1px',
-        }"
-        @click="activeTab = tab.key"
-      >
-        <Icon :name="tab.icon" style="width:15px;height:15px;" />
-        {{ tab.label }}
-        <span
-          v-if="tab.key === 'alertas' && (outOfStockProducts.length + lowStockProducts.length) > 0"
-          :style="{ background: '#EF4444', color: '#fff', borderRadius: '9999px', fontSize: '11px', padding: '1px 6px', lineHeight: '1.4' }"
-        >
-          {{ outOfStockProducts.length + lowStockProducts.length }}
-        </span>
-      </button>
-    </div>
+      </template>
+      <template #tabs>
+        <ZimaSubTabs
+          v-model="activeTab"
+          :tabs="tabs.map(t => ({
+            ...t,
+            count: t.key === 'alertas' && (outOfStockProducts.length + lowStockProducts.length) > 0
+              ? outOfStockProducts.length + lowStockProducts.length
+              : undefined,
+          }))"
+        />
+      </template>
+    </ZimaPageHeader>
 
     <!-- ══════════════════════════════════════════════════════════════ -->
     <!-- TAB: PRODUTOS -->
@@ -826,7 +842,7 @@ const exportProductsCSV = () => {
       </div>
 
       <!-- Filtros -->
-      <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <div class="flex items-center gap-4 mb-5 flex-wrap">
         <div :style="{ position: 'relative', flex: '1', minWidth: '200px' }">
           <Icon
             name="i-lucide-search"
@@ -880,7 +896,7 @@ const exportProductsCSV = () => {
       </div>
 
       <!-- Totalizador -->
-      <p class="mb-3" :style="{ fontSize: '13px', color: 'var(--zima-text-muted)' }">
+      <p class="mb-4" :style="{ fontSize: '13px', color: 'var(--zima-text-muted)' }">
         {{ filteredProducts.length }} produtos &middot; Valor: {{ fmt(totalStockValueFiltered) }}
       </p>
 
@@ -1030,10 +1046,10 @@ const exportProductsCSV = () => {
           </template>
 
           <template #batch-actions="{ selected }">
-            <ZimaButton size="sm" variant="ghost" @click="toast.info('Desativando ' + selected.length + ' produtos...')">
+            <ZimaButton size="sm" variant="ghost" @click="batchDeactivate(selected as Product[])">
               Desativar selecionados ({{ selected.length }})
             </ZimaButton>
-            <ZimaButton size="sm" variant="ghost" @click="toast.info('Exportando ' + selected.length + ' produtos...')">
+            <ZimaButton size="sm" variant="ghost" @click="batchExport(selected as Product[])">
               Exportar selecionados
             </ZimaButton>
           </template>
@@ -1166,7 +1182,7 @@ const exportProductsCSV = () => {
               fontSize: '13px',
               fontFamily: 'monospace',
               fontWeight: '600',
-              color: (row as StockMovement).qty > 0 ? '#10B981' : '#EF4444',
+              color: (row as StockMovement).qty > 0 ? 'var(--zima-success)' : 'var(--zima-danger)',
             }"
           >
             {{ (row as StockMovement).qty > 0 ? '+' : '' }}{{ (row as StockMovement).qty }}
@@ -1240,7 +1256,7 @@ const exportProductsCSV = () => {
       <div class="mb-8">
         <div class="flex items-center gap-2 mb-4">
           <h2 :style="{ fontSize: '16px', fontWeight: '600', color: 'var(--zima-text-primary)' }">Sem Estoque</h2>
-          <span :style="{ background: '#EF4444', color: '#fff', borderRadius: '9999px', fontSize: '12px', padding: '1px 8px', fontWeight: '600' }">
+          <span :style="{ background: 'var(--zima-danger)', color: '#fff', borderRadius: '9999px', fontSize: '12px', padding: '1px 8px', fontWeight: '600' }">
             {{ outOfStockProducts.length }}
           </span>
         </div>
@@ -1248,7 +1264,7 @@ const exportProductsCSV = () => {
           <Icon name="i-lucide-check-circle" style="width:32px;height:32px;color:#10B981;margin:0 auto 8px;" />
           <p :style="{ color: 'var(--zima-text-muted)', fontSize: '14px' }">Nenhum produto sem estoque. Ótimo!</p>
         </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div
             v-for="p in outOfStockProducts"
             :key="p.id"
@@ -1256,7 +1272,7 @@ const exportProductsCSV = () => {
               background: 'rgba(239,68,68,0.04)',
               border: '1px solid rgba(239,68,68,0.2)',
               borderRadius: 'var(--zima-radius-lg)',
-              padding: '16px',
+              padding: '20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1272,7 +1288,7 @@ const exportProductsCSV = () => {
               </div>
               <div class="flex items-center gap-2">
                 <Icon name="i-lucide-package-x" style="width:14px;height:14px;color:#EF4444;" />
-                <span :style="{ fontSize: '13px', color: '#EF4444', fontWeight: '600' }">Estoque zerado</span>
+                <span :style="{ fontSize: '13px', color: 'var(--zima-danger)', fontWeight: '600' }">Estoque zerado</span>
                 <span :style="{ fontSize: '12px', color: 'var(--zima-text-muted)' }">· mín. {{ p.minStock }}</span>
               </div>
               <div v-if="p.supplierId" :style="{ fontSize: '12px', color: 'var(--zima-text-muted)', marginTop: '4px' }">
@@ -1291,7 +1307,7 @@ const exportProductsCSV = () => {
       <div class="mb-8">
         <div class="flex items-center gap-2 mb-4">
           <h2 :style="{ fontSize: '16px', fontWeight: '600', color: 'var(--zima-text-primary)' }">Estoque Baixo</h2>
-          <span :style="{ background: '#F59E0B', color: '#fff', borderRadius: '9999px', fontSize: '12px', padding: '1px 8px', fontWeight: '600' }">
+          <span :style="{ background: 'var(--zima-warning)', color: '#fff', borderRadius: '9999px', fontSize: '12px', padding: '1px 8px', fontWeight: '600' }">
             {{ lowStockProducts.length }}
           </span>
         </div>
@@ -1299,7 +1315,7 @@ const exportProductsCSV = () => {
           <Icon name="i-lucide-check-circle" style="width:32px;height:32px;color:#10B981;margin:0 auto 8px;" />
           <p :style="{ color: 'var(--zima-text-muted)', fontSize: '14px' }">Todos os produtos estão com estoque adequado!</p>
         </div>
-        <div v-else class="grid grid-cols-2 gap-3">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div
             v-for="p in lowStockProducts"
             :key="p.id"
@@ -1307,7 +1323,7 @@ const exportProductsCSV = () => {
               background: 'rgba(245,158,11,0.04)',
               border: '1px solid rgba(245,158,11,0.2)',
               borderRadius: 'var(--zima-radius-lg)',
-              padding: '16px',
+              padding: '20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1323,9 +1339,9 @@ const exportProductsCSV = () => {
               </div>
               <div class="flex items-center gap-2">
                 <div :style="{ flex: '1', maxWidth: '100px', height: '4px', background: 'rgba(148,163,184,0.15)', borderRadius: '2px', overflow: 'hidden' }">
-                  <div :style="{ width: stockBarWidth(p) + '%', background: '#F59E0B', height: '100%' }" />
+                  <div :style="{ width: stockBarWidth(p) + '%', background: 'var(--zima-warning)', height: '100%' }" />
                 </div>
-                <span :style="{ fontSize: '13px', color: '#F59E0B', fontWeight: '600' }">{{ p.stock }} / {{ p.minStock }} mín.</span>
+                <span :style="{ fontSize: '13px', color: 'var(--zima-warning)', fontWeight: '600' }">{{ p.stock }} / {{ p.minStock }} mín.</span>
               </div>
               <div v-if="p.supplierId" :style="{ fontSize: '12px', color: 'var(--zima-text-muted)', marginTop: '4px' }">
                 Fornecedor: {{ getSupplierName(p.supplierId) }}
@@ -1374,7 +1390,7 @@ const exportProductsCSV = () => {
     <!-- DRAWER: Detalhes do Produto -->
     <!-- ══════════════════════════════════════════════════════════════ -->
     <ZimaDrawer v-model="productDrawerOpen" :title="selectedProduct?.name || ''" width="520px">
-      <div v-if="selectedProduct" class="p-4">
+      <div v-if="selectedProduct" class="p-5">
         <!-- Imagem/placeholder -->
         <div
           :style="{
@@ -1404,8 +1420,8 @@ const exportProductsCSV = () => {
         </div>
 
         <!-- Preços -->
-        <div :style="{ background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-lg)', padding: '16px', marginBottom: '16px' }">
-          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Preços</p>
+        <div :style="{ background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-lg)', padding: '20px', marginBottom: '16px' }">
+          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Preços</p>
           <div class="grid grid-cols-3 gap-4">
             <div>
               <p :style="{ fontSize: '11px', color: 'var(--zima-text-muted)', marginBottom: '2px' }">Custo</p>
@@ -1425,8 +1441,8 @@ const exportProductsCSV = () => {
         </div>
 
         <!-- Estoque -->
-        <div :style="{ background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-lg)', padding: '16px', marginBottom: '16px' }">
-          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Estoque</p>
+        <div :style="{ background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-lg)', padding: '20px', marginBottom: '16px' }">
+          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Estoque</p>
           <div class="grid grid-cols-3 gap-4">
             <div>
               <p :style="{ fontSize: '11px', color: 'var(--zima-text-muted)', marginBottom: '2px' }">Atual</p>
@@ -1447,8 +1463,8 @@ const exportProductsCSV = () => {
         </div>
 
         <!-- Classificação -->
-        <div :style="{ background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-lg)', padding: '16px', marginBottom: '16px' }">
-          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Classificação</p>
+        <div :style="{ background: 'var(--zima-bg-surface-2)', borderRadius: 'var(--zima-radius-lg)', padding: '20px', marginBottom: '16px' }">
+          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Classificação</p>
           <div class="flex flex-wrap gap-2">
             <ZimaBadge v-if="selectedProduct.forSale" variant="success">Venda ao cliente</ZimaBadge>
             <ZimaBadge v-if="selectedProduct.forInternalUse" variant="info">Uso interno</ZimaBadge>
@@ -1459,9 +1475,9 @@ const exportProductsCSV = () => {
 
         <!-- Variações -->
         <div v-if="selectedProduct.variations && selectedProduct.variations.length > 0" :style="{ marginBottom: '16px' }">
-          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Variações</p>
-          <div :style="{ border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', overflow: 'hidden' }">
-            <table style="width:100%; border-collapse:collapse;">
+          <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Variações</p>
+          <div :style="{ border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }">
+            <table style="width:100%; border-collapse:collapse; min-width: 320px;">
               <thead>
                 <tr :style="{ background: 'var(--zima-bg-surface-2)' }">
                   <th :style="{ padding: '8px 12px', fontSize: '12px', color: 'var(--zima-text-muted)', fontWeight: '500', textAlign: 'left' }">Variação</th>
@@ -1477,7 +1493,7 @@ const exportProductsCSV = () => {
                 >
                   <td :style="{ padding: '8px 12px', fontSize: '13px', color: 'var(--zima-text-primary)' }">{{ v.name }}</td>
                   <td :style="{ padding: '8px 12px', fontSize: '12px', fontFamily: 'monospace', color: 'var(--zima-text-muted)' }">{{ v.sku }}</td>
-                  <td :style="{ padding: '8px 12px', fontSize: '13px', fontFamily: 'monospace', textAlign: 'right', color: v.stock === 0 ? '#EF4444' : 'var(--zima-text-primary)' }">{{ v.stock }}</td>
+                  <td :style="{ padding: '8px 12px', fontSize: '13px', fontFamily: 'monospace', textAlign: 'right', color: v.stock === 0 ? 'var(--zima-danger)' : 'var(--zima-text-primary)' }">{{ v.stock }}</td>
                 </tr>
               </tbody>
             </table>
@@ -1497,7 +1513,7 @@ const exportProductsCSV = () => {
             >
               <Icon :name="movTypeConfig[m.type].icon" :style="{ width: '14px', height: '14px', color: movTypeConfig[m.type].color, flexShrink: '0' }" />
               <span :style="{ color: movTypeConfig[m.type].color, fontWeight: '500', minWidth: '60px' }">{{ movTypeConfig[m.type].label }}</span>
-              <span :style="{ fontFamily: 'monospace', fontWeight: '600', color: m.qty > 0 ? '#10B981' : '#EF4444' }">{{ m.qty > 0 ? '+' : '' }}{{ m.qty }}</span>
+              <span :style="{ fontFamily: 'monospace', fontWeight: '600', color: m.qty > 0 ? 'var(--zima-success)' : 'var(--zima-danger)' }">{{ m.qty > 0 ? '+' : '' }}{{ m.qty }}</span>
               <span :style="{ color: 'var(--zima-text-muted)', marginLeft: 'auto', fontSize: '12px' }">{{ m.createdAt }}</span>
             </div>
           </div>
@@ -1543,11 +1559,17 @@ const exportProductsCSV = () => {
               fontSize: '12px',
               textAlign: 'center',
             }"
-            @click="toast.info('Upload de imagem em breve!')"
+            @click="triggerProductImage"
           >
-            <Icon name="i-lucide-camera" style="width:24px;height:24px;opacity:0.5;" />
-            <span>Foto</span>
+            <template v-if="productImagePreview">
+              <img :src="productImagePreview" alt="Pré-visualização" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" >
+            </template>
+            <template v-else>
+              <Icon name="i-lucide-camera" style="width:24px;height:24px;opacity:0.5;" />
+              <span>Foto</span>
+            </template>
           </div>
+          <input ref="productImageInput" type="file" accept="image/*" hidden @change="onProductImageSelected" >
           <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="sm:col-span-2">
               <ZimaInput v-model="productForm.name" label="Nome do produto *" placeholder="Ex: Shampoo Wella Fusion 500ml" />
@@ -1741,8 +1763,8 @@ const exportProductsCSV = () => {
         <div>
           <ZimaToggle v-model="productForm.hasVariations" label="Este produto tem variações (cores, tamanhos...)" />
           <div v-if="productForm.hasVariations" class="mt-4">
-            <div :style="{ border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', overflow: 'hidden', marginBottom: '8px' }">
-              <table style="width:100%; border-collapse:collapse;">
+            <div :style="{ border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: '8px' }">
+              <table style="width:100%; border-collapse:collapse; min-width: 400px;">
                 <thead>
                   <tr :style="{ background: 'var(--zima-bg-surface-2)' }">
                     <th :style="{ padding: '8px 12px', fontSize: '12px', color: 'var(--zima-text-muted)', fontWeight: '500', textAlign: 'left' }">Nome</th>
@@ -1854,8 +1876,8 @@ const exportProductsCSV = () => {
 
         <!-- Tabela de produtos -->
         <p :style="{ fontSize: '13px', fontWeight: '600', color: 'var(--zima-text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }">Produtos</p>
-        <div :style="{ border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', overflow: 'hidden', marginBottom: '8px' }">
-          <table style="width:100%;border-collapse:collapse;">
+        <div :style="{ border: '1px solid var(--zima-border-default)', borderRadius: 'var(--zima-radius-md)', overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: '8px' }">
+          <table style="width:100%;border-collapse:collapse;min-width:420px;">
             <thead>
               <tr :style="{ background: 'var(--zima-bg-surface-2)' }">
                 <th :style="{ padding: '8px 12px', fontSize: '12px', color: 'var(--zima-text-muted)', fontWeight: '500', textAlign: 'left' }">Produto</th>
@@ -2003,7 +2025,7 @@ const exportProductsCSV = () => {
               padding: '8px 12px',
               borderRadius: 'var(--zima-radius-md)',
               background: adjustDiff > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-              color: adjustDiff > 0 ? '#10B981' : '#EF4444',
+              color: adjustDiff > 0 ? 'var(--zima-success)' : 'var(--zima-danger)',
               fontSize: '14px',
               fontWeight: '600',
               fontFamily: 'monospace',
@@ -2104,7 +2126,7 @@ const exportProductsCSV = () => {
             >
               <div class="flex items-center justify-between">
                 <span :style="{ fontSize: '13px', color: 'var(--zima-text-primary)' }">{{ m.productName }}</span>
-                <span :style="{ fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', color: '#10B981' }">+{{ m.qty }}</span>
+                <span :style="{ fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', color: 'var(--zima-success)' }">+{{ m.qty }}</span>
               </div>
               <div class="flex items-center justify-between mt-1">
                 <span :style="{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--zima-text-muted)' }">{{ m.invoiceNumber }}</span>

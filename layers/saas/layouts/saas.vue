@@ -25,7 +25,10 @@ const toast = useZimaToast()
 setupCommandPaletteShortcut()
 
 // Navegação da sidebar — configuração central do SaaS
-const navGroups: SidebarNavGroup[] = [
+// Badge de conversas não lidas no item Inbox (reativo ao useInbox).
+const { totalUnread: inboxUnread } = useInbox()
+
+const navGroups = computed<SidebarNavGroup[]>(() => [
   {
     key: 'operacional',
     label: 'Operacional',
@@ -41,7 +44,7 @@ const navGroups: SidebarNavGroup[] = [
     key: 'atendimento',
     label: 'Atendimento',
     items: [
-      { key: 'inbox',        label: 'Inbox',          icon: 'i-lucide-message-square',    to: '/saas/inbox', badge: 12 },
+      { key: 'inbox',        label: 'Mensagens',      icon: 'i-lucide-message-square',    to: '/saas/inbox', badge: inboxUnread.value || undefined },
       { key: 'ia',           label: 'IA & Automação', icon: 'i-lucide-bot',               to: '/saas/ia' },
       { key: 'campanhas',    label: 'Campanhas',       icon: 'i-lucide-megaphone',         to: '/saas/campanhas' },
     ],
@@ -64,7 +67,7 @@ const navGroups: SidebarNavGroup[] = [
       { key: 'configuracoes',label: 'Configurações',  icon: 'i-lucide-settings',          to: '/saas/configuracoes' },
     ],
   },
-]
+])
 
 // Command palette items
 const commandItems = [
@@ -74,53 +77,32 @@ const commandItems = [
   { id: 'p-clientes',      label: 'Clientes',         icon: 'i-lucide-users',             group: 'Páginas',         to: '/saas/clientes' },
   { id: 'p-financeiro',    label: 'Financeiro',       icon: 'i-lucide-trending-up',       group: 'Páginas',         to: '/saas/financeiro' },
   { id: 'p-estoque',       label: 'Estoque',          icon: 'i-lucide-package',           group: 'Páginas',         to: '/saas/estoque' },
-  { id: 'p-inbox',         label: 'Inbox',            icon: 'i-lucide-message-square',    group: 'Páginas',         to: '/saas/inbox' },
+  { id: 'p-inbox',         label: 'Mensagens',        icon: 'i-lucide-message-square',    group: 'Páginas',         to: '/saas/inbox' },
   { id: 'p-relatorios',    label: 'Relatórios',       icon: 'i-lucide-bar-chart-2',       group: 'Páginas',         to: '/saas/relatorios' },
   { id: 'p-config',        label: 'Configurações',    icon: 'i-lucide-settings',          group: 'Páginas',         to: '/saas/configuracoes' },
-  // Ações rápidas
-  { id: 'a-novo-agend',    label: 'Novo Agendamento', icon: 'i-lucide-calendar-plus',     group: 'Ações Rápidas',   shortcut: 'N', action: () => { const s = useState<boolean>('saas:modal:newAppointment', () => false); s.value = true } },
-  { id: 'a-nova-venda',    label: 'Nova Venda',       icon: 'i-lucide-shopping-cart',     group: 'Ações Rápidas',   shortcut: 'V', action: () => toast.info('Abrir PDV') },
-  { id: 'a-novo-cliente',  label: 'Novo Cliente',     icon: 'i-lucide-user-plus',         group: 'Ações Rápidas',   shortcut: 'C', action: () => toast.info('Abrir cadastro de cliente') },
+  { id: 'p-equipe',        label: 'Equipe',           icon: 'i-lucide-user-check',        group: 'Páginas',         to: '/saas/equipe' },
+  { id: 'p-campanhas',     label: 'Campanhas',        icon: 'i-lucide-megaphone',         group: 'Páginas',         to: '/saas/campanhas' },
+  { id: 'p-notas',         label: 'Notas Fiscais',    icon: 'i-lucide-receipt',           group: 'Páginas',         to: '/saas/notas' },
+  { id: 'p-perfil',        label: 'Meu Perfil',       icon: 'i-lucide-user-circle',       group: 'Páginas',         to: '/saas/configuracoes/perfil' },
+  // Ações rápidas — navegam para a tela já com a ação disponível.
+  { id: 'a-novo-agend',    label: 'Novo Agendamento', icon: 'i-lucide-calendar-plus',     group: 'Ações Rápidas',   shortcut: 'N', action: () => navigateTo('/saas/agenda') },
+  { id: 'a-nova-venda',    label: 'Nova Venda (PDV)', icon: 'i-lucide-shopping-cart',     group: 'Ações Rápidas',   shortcut: 'V', action: () => navigateTo('/saas/caixa') },
+  { id: 'a-novo-cliente',  label: 'Novo Cliente',     icon: 'i-lucide-user-plus',         group: 'Ações Rápidas',   shortcut: 'C', action: () => navigateTo('/saas/clientes') },
+  { id: 'a-emitir-nota',   label: 'Emitir Nota Fiscal', icon: 'i-lucide-file-text',       group: 'Ações Rápidas',   action: () => navigateTo('/saas/notas?tab=nfse') },
+  { id: 'a-reativar',      label: 'Reativar clientes inativos', icon: 'i-lucide-megaphone', group: 'Ações Rápidas',  action: () => navigateTo('/saas/clientes') },
 ]
 
-// Notificações mock para demo
-const notifications = ref<Notification[]>([
-  {
-    id: 'n1',
-    title: 'Novo agendamento confirmado',
-    description: 'Maria Silva agendou Corte + Escova para hoje às 15h',
-    time: 'há 5 min',
-    read: false,
-    type: 'success',
-    to: '/saas/agenda',
-  },
-  {
-    id: 'n2',
-    title: 'Estoque baixo: Wella Color Touch',
-    description: 'Restam apenas 2 unidades. Estoque mínimo: 5',
-    time: 'há 23 min',
-    read: false,
-    type: 'warning',
-    to: '/saas/estoque',
-  },
-  {
-    id: 'n3',
-    title: 'Avaliação negativa recebida',
-    description: 'João Mendes deu 2 estrelas. Verifique e responda.',
-    time: 'há 1h',
-    read: false,
-    type: 'danger',
-    to: '/saas/marketing',
-  },
-  {
-    id: 'n4',
-    title: 'Pagamento recebido via Pix',
-    description: 'R$ 245,00 — Ana Costa (Coloração + Hidratação)',
-    time: 'há 2h',
-    read: true,
-    type: 'success',
-  },
-])
+// Centro de notificações real — alimentado por eventos de domínio (useDomainEvents).
+const { items: notifications, markRead, markAllRead } = useNotifications()
+
+// Perfil do usuário (fonte única topbar + página de perfil).
+const { profile: userProfile } = useProfile()
+
+const handleLogout = () => {
+  toast.info('Sessão encerrada', 'Você seria redirecionado para o login.')
+  // Em produção: limpar sessão e navigateTo('/login'). No mock, volta ao dashboard.
+  navigateTo('/saas')
+}
 
 const route = useRoute()
 
@@ -141,12 +123,12 @@ const activeKey = computed(() => {
 })
 
 const handleMarkAllRead = () => {
-  notifications.value.forEach(n => n.read = true)
+  markAllRead()
   toast.success('Todas as notificações marcadas como lidas')
 }
 
 const handleNotificationClick = (notif: Notification) => {
-  notif.read = true
+  markRead(notif.id)
   if (notif.to) navigateTo(notif.to)
 }
 </script>
@@ -164,7 +146,9 @@ const handleNotificationClick = (notif: Notification) => {
         :style="{
           position: 'fixed',
           inset: '0',
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(7, 9, 14, 0.75)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
           zIndex: 'calc(var(--zima-z-overlay) - 1)',
         }"
         aria-hidden="true"
@@ -177,6 +161,7 @@ const handleNotificationClick = (notif: Notification) => {
       :groups="navGroups"
       :active-key="activeKey"
       :mobile-open="sidebarMobileOpen"
+      app-name="Zima"
       @navigate="(item) => { if (item.to) { navigateTo(item.to); closeSidebarMobile() } }"
       @close="closeSidebarMobile"
     />
@@ -185,13 +170,14 @@ const handleNotificationClick = (notif: Notification) => {
     <ZimaTopBar
       :breadcrumbs="breadcrumbs"
       :notifications="notifications"
-      user-name="Luiz Matos"
-      user-role="Proprietário"
+      :user-name="userProfile.name"
+      :user-role="userProfile.role"
+      :user-avatar="userProfile.avatarUrl ?? undefined"
       @mark-all-read="handleMarkAllRead"
       @notification-click="handleNotificationClick"
       @profile="navigateTo('/saas/configuracoes/perfil')"
       @settings="navigateTo('/saas/configuracoes')"
-      @logout="toast.info('Saindo...')"
+      @logout="handleLogout"
     />
 
     <!-- Main content area — padding-left via CSS media query -->

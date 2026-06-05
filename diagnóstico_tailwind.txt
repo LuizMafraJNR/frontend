@@ -1,0 +1,173 @@
+﻿=== DIAGNÓSTICO EMPÍRICO - PROBLEMA DE ESTILIZAÇÃO TAILWIND /SAAS ===
+Data: 05/31/2026 17:45:17
+Porta: 3000
+
+1. DISPONIBILIDADE DO SERVIDOR
+   ✓ Servidor Nuxt respondendo em http://localhost:3000
+   ✓ /saas endpoint acessível (HTTP 200)
+   ✓ / (landing) endpoint acessível (HTTP 200)
+
+2. ARQUIVO CSS PRINCIPAL (/_nuxt/assets/css/main.css)
+   Tamanho: 159,950 bytes
+   Minificado: Sim (linhas muito longas, ~17,776 chars por linha)
+   
+   CLASSES TAILWIND PRESENTES:
+   ✓ .flex (class: .flex { display: flex; })
+   ✓ .grid
+   ✓ .grid-cols-2
+   ✓ .grid-cols-3
+   ✓ .grid-cols-12
+   ✓ .gap-4
+   ✓ .gap-6
+   ✓ .flex-col
+   ✓ .items-center
+   ✓ Media queries com grid-cols (encontrado @media)
+   ✓ Classes responsivas com escape: \:grid-cols (eg. sm\:grid-cols-2)
+   
+   CLASSES AUSENTES (esperadas):
+   ✗ sm:grid-cols-2 (literalmente) — presentes com escape \: em media queries
+   ✗ lg:grid-cols-3 (literalmente) — presentes com escape \: em media queries
+   
+   CONSTATAÇÃO: Classes responsivas SÃO geradas, mas com escaping CSS apropriado
+   para breakpoints (dentro de @media queries, não literalmente no seletor).
+   
+   Estatísticas:
+   - Classes .grid-cols-*: 19 ocorrências
+   - Classes .flex: 8 ocorrências
+   - Classes .gap-*: 12 ocorrências
+   - Variáveis CSS Zima: 168 definições
+
+3. VARIÁVEIS CSS ZIMA (Custom Properties)
+   ✓ :root encontrado no main.css
+   ✓ Variáveis Zima definidas em :root
+   ✓ Exemplos: --zima-bg-base, --zima-text-secondary, --zima-focus-outline, --zima-blue-core, --zima-shadow-md
+   
+   Arquivo: app/assets/css/tokens-zima.css
+   - Backgrounds (--zima-bg-*): 6 variáveis
+   - Zima Blue (--zima-blue-*): 15 variáveis + derivadas
+   - Semânticas (--zima-success, warning, danger, info): 4 variáveis
+   - Texto (--zima-text-*): 5 variáveis
+   - Bordas (--zima-border-*): 5 variáveis
+   - Border Radius (--zima-radius-*): 6 variáveis
+   - Sombras (--zima-shadow-*): 4 variáveis+
+
+4. HTML DO /SAAS
+   Tamanho: 89,795 bytes
+   Uso de variáveis CSS: 301 ocorrências de var(--zima-*)
+   Uso de classes Tailwind:
+   - class com 'flex': 163 atributos
+   - class com 'grid': 2 atributos
+   
+   Links CSS inclusos:
+   - /_nuxt/virtual:nuxt:...nuxt-fonts-global.css
+   - /_nuxt/assets/css/main.css (PRINCIPAL)
+   - /_nuxt/layouts/landing.vue?vue&type=style (múltiplas)
+   - /_nuxt/...(saas components scoped CSS - ZimaDrawer, ZimaModal, etc.)
+   - /_nuxt/.../app/assets/css/main.css (cópia ou duplicada)
+
+5. HTML DA LANDING (/)
+   Tamanho: 93,811 bytes
+   Variáveis Zima: 12 ocorrências (menos que saas)
+   
+   Links CSS:
+   - Mesmo /_nuxt/assets/css/main.css (IDÊNTICO)
+   - CSS scoped específicos da landing (não incluem saas)
+   
+   CONSTATAÇÃO: Landing usa o MESMO arquivo main.css que /saas
+
+6. CONFIGURAÇÃO TAILWIND (Nuxt 4)
+   Arquivo: nuxt.config.ts
+   - Plugin: @tailwindcss/vite
+   - Configuração em @theme { } no main.css (Tailwind v4 novo)
+   - Tokens mapeados para Zima Blue colors
+   
+   Arquivo: app/assets/css/main.css
+   - @import 'tailwindcss' (linha 2)
+   - @source "../../../layers" (escaneia todas layers)
+   - @source "../.." (escaneia app)
+   - @theme { } com mapeamentos Zima → Tailwind colors
+   - @layer base { } com variáveis de scrollbar
+   - @layer utilities { } com classes Zima customizadas
+   
+   CONSTATAÇÃO: Tailwind está configurado para escanear /layers/saas
+                (via @source "../../../layers" na linha 5)
+
+7. ESTRUTURA DE LAYERS
+   - app/ (root layer)
+   - layers/core/
+   - layers/ui/
+   - layers/landing/
+   - layers/saas/       ← Contém componentes Zima*
+     - components/zima/ZimaDrawer.vue
+     - components/zima/ZimaModal.vue
+     - components/zima/ZimaSelect.vue
+     - components/zima/ZimaSidebar.vue
+     - components/zima/ZimaTopBar.vue
+     - components/zima/ZimaCommandPalette.vue
+     - components/zima/ZimaToast.vue
+     - components/zima/ZimaTable.vue
+     - pages/saas/index.vue
+     - pages/saas/inbox.vue
+     - layouts/saas.vue
+   
+   nuxt.config.ts (layers/saas/):
+   - Vazio (extends: [] — sem configuração extra)
+   - Componentes auto-importados via convenção Nuxt
+
+8. CSS SCOPED DOS COMPONENTES ZIMA
+   Exemplo: ZimaSidebar.vue?scoped=87e1cb61
+   - Transformado pelo Vite em código JS com HMR
+   - Contém media queries (@media (min-width: 1024px))
+   - Usa var(--zima-sidebar-width) e var(--zima-sidebar-width-collapsed)
+   
+   CONSTATAÇÃO: CSS scoped está carregando corretamente,
+                variáveis Zima estão sendo referenciadas
+
+9. RESUMO TÉCNICO
+   
+   PROBLEMA OBSERVADO:
+   - /saas renderiza sem estilização Tailwind (flex, grid, gap não aplicados)
+   - Landing page funciona
+   
+   ACHADOS EMPÍRICOS:
+   ✓ Classes Tailwind (.flex, .grid, .grid-cols-*, .gap-*) ESTÃO presentes no CSS
+   ✓ Variáveis CSS Zima (--zima-*) ESTÃO definidas e com 301 referências no HTML
+   ✓ CSS está sendo servido (159KB baixado com sucesso)
+   ✓ Ambos /saas e / usam O MESMO arquivo main.css
+   ✓ Arquivo é minificado e contém @layer directives do Tailwind
+   ✓ Classes responsivas estão presentes com escaping CSS apropriado
+   ✓ Componentes scoped estão carregando e referenciando variáveis
+   
+   HIPÓTESES PARA INVESTIGAR:
+   1. Classes Tailwind EXISTEM no CSS, mas especificidade ou seletores
+      não estão sendo aplicados corretamente (cascata CSS)
+   
+   2. Possível duplicação ou conflito em CSS scoped dos componentes Zima
+      (há múltiplos links para o mesmo arquivo com ?vue&type=style)
+   
+   3. Possível problema de ordem de carregamento:
+      - Landing CSS carrega antes dos componentes Zima
+      - /saas carrega depois, CSS specificity pode estar invertida
+   
+   4. Variáveis CSS Zima podem estar sobrescrevendo Tailwind
+      (301 ocorrências de var(--zima-*) vs. classes simples)
+   
+   5. Possível problema com SSR (renderização no servidor) vs. Hidratação
+      - ssr: true configurado para /saas/** no nuxt.config.ts
+      - Landing usa prerender: true
+      - Pode haver divergência entre renderizado e hidratado no cliente
+   
+   6. Cache ou build inválido
+      - Arquivo main.css pode estar desatualizado
+      - Pode haver .nuxt/ ou node_modules/.cache/ não limpo
+      
+   === PRÓXIMAS ETAPAS (NÃO EXECUTADAS) ===
+   - Inspecionar DevTools do navegador em /saas (ver estilos computados)
+   - Comparar order de CSS entre landing e /saas
+   - Verificar se há :root { display: none !important } ou similar sobrescrevendo
+   - Verificar console.js para erros de renderização
+   - Limpar .nuxt/ e rodar build novamente
+   - Verificar se componentes Zima têm styles: [...]  em defineComponent
+
+---
+Arquivo CSS salvo em: main_css.txt (159,950 bytes)

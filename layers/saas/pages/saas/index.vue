@@ -8,9 +8,11 @@ definePageMeta({ layout: 'saas' })
 
 const toast = useZimaToast()
 
-// ── Agendamentos do dia (via composable) ──────────────────────────────────────
+// ── Dados reais (via composables) ─────────────────────────────────────────────
 const { appointments, fetchAll: fetchAppointments } = useAppointments()
-onMounted(() => fetchAppointments())
+const { transactions, fetchAll: fetchFinancial } = useFinancial()
+const { customers, fetchAll: fetchCustomers } = useCustomers()
+onMounted(() => Promise.all([fetchAppointments(), fetchFinancial(), fetchCustomers()]))
 
 // ── Modais disparados pelas ações rápidas do header ───────────────────────────
 const showAgendamentoModal = ref(false)
@@ -57,8 +59,6 @@ const setPeriodo = (key: PeriodoKey, ev?: MouseEvent) => {
   }
   periodoAtivo.value = key
   customRangeOpen.value = false
-  isLoading.value = true
-  setTimeout(() => { isLoading.value = false }, 600)
 }
 
 const applyCustomRange = () => {
@@ -72,9 +72,15 @@ const applyCustomRange = () => {
   }
   periodoAtivo.value = 'custom'
   customRangeOpen.value = false
-  isLoading.value = true
-  setTimeout(() => { isLoading.value = false }, 600)
 }
+
+// ── Intervalo de datas do período ativo (recorte real dos KPIs) ───────────────
+const { rangeForPreset, isInRange } = useDateRange()
+const periodoRange = computed(() =>
+  rangeForPreset(periodoAtivo.value, { start: customRangeStart.value, end: customRangeEnd.value }),
+)
+const inRange = (dateStr: string) => isInRange(dateStr, periodoRange.value)
+const periodoLabel = computed(() => periodos.find(p => p.key === periodoAtivo.value)?.label ?? '')
 
 // Fecha o popover ao clicar fora
 const onDocumentClickCustomRange = (e: MouseEvent) => {
@@ -88,65 +94,94 @@ const onDocumentClickCustomRange = (e: MouseEvent) => {
 onMounted(() => document.addEventListener('click', onDocumentClickCustomRange))
 onUnmounted(() => document.removeEventListener('click', onDocumentClickCustomRange))
 
-// ── Saudação dinâmica ────────────────────────────────────────────────────────
-const saudacao = computed(() => {
-  const h = new Date().getHours()
-  if (h < 12) return 'Bom dia'
-  if (h < 18) return 'Boa tarde'
-  return 'Boa noite'
-})
-
-const dataFormatada = computed(() => {
-  return new Date().toLocaleDateString('pt-BR', {
+// ── Saudação dinâmica (client-only — depende da hora/timezone do usuário) ──────
+// Calculado em onMounted para evitar hydration mismatch: new Date() no servidor
+// (UTC) divergiria da hora/data do cliente. Começa com valor neutro estável.
+const saudacao = ref('Olá')
+const dataFormatada = ref('')
+onMounted(() => {
+  const now = new Date()
+  const h = now.getHours()
+  saudacao.value = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+  dataFormatada.value = now.toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 })
 
-// ── KPI Cards ────────────────────────────────────────────────────────────────
-const kpis = [
+// ── KPI Cards (derivados dos dados reais, recortados pelo período) ────────────
+const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+// Receita paga no período
+const receitaPeriodo = computed(() =>
+  transactions.value
+    .filter(t => t.type === 'INCOME' && t.status === 'PAID' && inRange(t.date))
+    .reduce((s, t) => s + t.amount, 0),
+)
+// Agendamentos não cancelados no período
+const agendamentosPeriodo = computed(() =>
+  appointments.value.filter(a => a.status !== 'CANCELLED' && inRange(a.date)),
+)
+// Vendas (transações INCOME) no período — para ticket médio
+const vendasPeriodo = computed(() =>
+  transactions.value.filter(t => t.type === 'INCOME' && t.status === 'PAID' && inRange(t.date)),
+)
+// Novos clientes cadastrados no período
+const novosClientesPeriodo = computed(() =>
+  customers.value.filter(c => c.since && inRange(c.since)).length,
+)
+const ticketMedio = computed(() =>
+  vendasPeriodo.value.length ? receitaPeriodo.value / vendasPeriodo.value.length : 0,
+)
+const agendamentosHoje = computed(() =>
+  appointments.value.filter(a => a.status !== 'CANCELLED' && a.date === today).length,
+)
+
+// Série diária dos últimos 12 dias para os sparklines (a partir dos dados reais).
+const last12Days = computed(() =>
+  Array.from({ length: 12 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (11 - i))
+    return d.toISOString().slice(0, 10)
+  }),
+)
+const sparkReceita = computed(() =>
+  last12Days.value.map(day =>
+    transactions.value
+      .filter(t => t.type === 'INCOME' && t.status === 'PAID' && t.date.slice(0, 10) === day)
+      .reduce((s, t) => s + t.amount, 0),
+  ),
+)
+const sparkAgendamentos = computed(() =>
+  last12Days.value.map(day => appointments.value.filter(a => a.status !== 'CANCELLED' && a.date === day).length),
+)
+const sparkNovosClientes = computed(() =>
+  last12Days.value.map(day => customers.value.filter(c => c.since && c.since.slice(0, 10) === day).length),
+)
+// Garante série não-degenerada (evita path vazio no SVG).
+const safeSpark = (arr: number[]) => (arr.some(v => v > 0) ? arr : arr.map(() => 0))
+
+const kpis = computed(() => [
   {
-    key:      'faturamento',
-    label:    'Faturamento',
-    value:    'R$ 12.847,90',
-    change:   '+12.4',
-    subinfo:  null,
-    to:       '/saas/financeiro',
-    icon:     'i-lucide-trending-up',
-    sparkline: [4200, 5800, 4900, 7200, 6100, 8400, 9100, 7800, 10200, 11400, 10900, 12847],
+    key: 'faturamento', label: 'Faturamento', value: fmtBRL(receitaPeriodo.value),
+    change: undefined as string | undefined, changeSuffix: '', subinfo: periodoLabel.value, to: '/saas/financeiro', icon: 'i-lucide-trending-up',
+    sparkline: safeSpark(sparkReceita.value),
   },
   {
-    key:     'agendamentos',
-    label:   'Agendamentos',
-    value:   '23',
-    change:  '+3',
-    changeSuffix: '',
-    subinfo: '8 hoje • 87% ocupação',
-    to:      '/saas/agenda',
-    icon:    'i-lucide-calendar',
-    sparkline: [12, 18, 15, 22, 19, 25, 21, 28, 24, 20, 26, 23],
+    key: 'agendamentos', label: 'Agendamentos', value: String(agendamentosPeriodo.value.length),
+    change: undefined as string | undefined, changeSuffix: '', subinfo: `${agendamentosHoje.value} hoje`, to: '/saas/agenda', icon: 'i-lucide-calendar',
+    sparkline: safeSpark(sparkAgendamentos.value),
   },
   {
-    key:     'clientes',
-    label:   'Novos Clientes',
-    value:   '7',
-    change:  '+2',
-    changeSuffix: '',
-    subinfo: '68% via WhatsApp',
-    to:      '/saas/clientes?sortBy=createdAt&sortDir=desc',
-    icon:    'i-lucide-users',
-    sparkline: [3, 5, 4, 6, 5, 8, 7, 9, 8, 6, 9, 7],
+    key: 'clientes', label: 'Novos Clientes', value: String(novosClientesPeriodo.value),
+    change: undefined as string | undefined, changeSuffix: '', subinfo: periodoLabel.value, to: '/saas/clientes', icon: 'i-lucide-users',
+    sparkline: safeSpark(sparkNovosClientes.value),
   },
   {
-    key:     'ticket',
-    label:   'Ticket Médio',
-    value:   'R$ 87,50',
-    change:  '-2.1',
-    subinfo: null,
-    to:      '/saas/relatorios',
-    icon:    'i-lucide-receipt',
-    sparkline: [92, 88, 95, 91, 87, 93, 89, 84, 90, 86, 88, 87],
+    key: 'ticket', label: 'Ticket Médio', value: fmtBRL(ticketMedio.value),
+    change: undefined as string | undefined, changeSuffix: '', subinfo: `${vendasPeriodo.value.length} vendas`, to: '/saas/relatorios', icon: 'i-lucide-receipt',
+    sparkline: safeSpark(sparkReceita.value),
   },
-]
+])
 
 // ── Sparkline SVG ─────────────────────────────────────────────────────────────
 const buildSparklinePath = (data: number[]): string => {
@@ -259,25 +294,8 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
   <div data-testid="dashboard-page">
 
     <!-- ── 1.1 Header ──────────────────────────────────────────────────────── -->
-    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
-      <!-- Saudação + data -->
-      <div>
-        <h1
-          style="font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em;"
-          :style="{ color: 'var(--zima-text-primary)', fontFamily: 'var(--zima-font-display)' }"
-        >
-          {{ saudacao }}, Luiz.
-        </h1>
-        <p
-          class="mt-1 capitalize"
-          style="font-size: 14px;"
-          :style="{ color: 'var(--zima-text-muted)' }"
-        >
-          {{ dataFormatada }}
-        </p>
-      </div>
-
-      <!-- Direita: período + ações rápidas -->
+    <ZimaPageHeader :title="saudacao + ', Luiz.'" :description="dataFormatada" class="mb-0">
+      <template #actions>
       <div class="relative flex flex-wrap items-center gap-2 sm:gap-3">
         <!-- Seletor de período -->
         <div
@@ -385,7 +403,8 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
           + Cliente
         </ZimaButton>
       </div>
-    </div>
+      </template>
+    </ZimaPageHeader>
 
     <!-- ── 1.2 KPI Cards ──────────────────────────────────────────────────── -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -416,15 +435,21 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
                 aria-hidden="true"
                 style="overflow: visible; display: block;"
               >
-                <!-- Area fill -->
+                <defs>
+                  <linearGradient :id="`spark-grad-${kpi.key}`" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--zima-blue-core)" stop-opacity="0.18" />
+                    <stop offset="100%" stop-color="var(--zima-blue-core)" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <!-- Area fill with gradient -->
                 <path
                   :d="buildSparklineArea(kpi.sparkline)"
-                  fill="rgba(59,130,246,0.10)"
+                  :fill="`url(#spark-grad-${kpi.key})`"
                 />
                 <!-- Line -->
                 <path
                   :d="buildSparklinePath(kpi.sparkline)"
-                  stroke="#3B82F6"
+                  stroke="var(--zima-blue-core)"
                   stroke-width="1.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -455,12 +480,10 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
         :key="alerta.id"
         class="flex items-center gap-3 px-4 rounded-lg"
         :style="{
-          height: '44px',
+          minHeight: '44px',
           background: 'var(--zima-bg-surface-2)',
           border: '1px solid var(--zima-border-default)',
-          borderLeftWidth: '3px',
-          borderLeftColor: ALERTA_COLOR[alerta.tipo],
-          borderLeftStyle: 'solid',
+          borderLeft: `4px solid ${ALERTA_COLOR[alerta.tipo]}`,
         }"
       >
         <Icon
@@ -728,10 +751,11 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
           <div
             v-for="(item, idx) in atividades"
             :key="idx"
-            class="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
+            class="flex items-start gap-3 px-4 cursor-pointer transition-colors"
             :style="{
+              padding: '10px 16px',
               borderBottom: idx < atividades.length - 1
-                ? '1px solid rgba(148,163,184,0.06)'
+                ? '1px solid var(--zima-border-divider)'
                 : 'none',
             }"
             @click="navigateTo(item.to)"
@@ -742,15 +766,16 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
             <div
               class="flex items-center justify-center rounded-lg shrink-0 mt-0.5"
               :style="{
-                width: '28px',
-                height: '28px',
+                width: '30px',
+                height: '30px',
                 background: 'var(--zima-bg-surface-hover)',
+                flexShrink: '0',
               }"
             >
               <Icon
                 :name="item.icon"
                 style="width: 13px; height: 13px;"
-                :style="{ color: item.color }"
+                :style="{ color: item.color || 'var(--zima-text-muted)' }"
                 aria-hidden="true"
               />
             </div>

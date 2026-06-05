@@ -41,9 +41,18 @@ const { openCommandPalette, notificationsOpen } = useSaasLayout()
 
 const userMenuOpen = ref(false)
 
+// Scroll-aware topbar
+const scrolled = ref(false)
+const onScroll = () => { scrolled.value = window.scrollY > 20 }
+onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }))
+onUnmounted(() => window.removeEventListener('scroll', onScroll))
+
 const unreadCount = computed(() =>
   props.notifications.filter(n => !n.read).length
 )
+
+// Apenas o primeiro nome
+const firstName = computed(() => props.userName.trim().split(' ')[0])
 
 const userInitials = computed(() => {
   const parts = props.userName.trim().split(' ')
@@ -65,6 +74,13 @@ const notificationTypeColor: Record<string, string> = {
   danger:  'var(--zima-danger)',
 }
 
+const notificationTypeBg: Record<string, string> = {
+  info:    'var(--zima-info-subtle)',
+  success: 'var(--zima-success-subtle)',
+  warning: 'var(--zima-warning-subtle)',
+  danger:  'var(--zima-danger-subtle)',
+}
+
 // Fechar menus ao clicar fora
 const handleOutsideClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement
@@ -82,28 +98,46 @@ const { toggleSidebarMobile } = useSaasLayout()
 
 <template>
   <header
-    class="fixed top-0 right-0 left-0 flex items-center gap-4"
+    class="fixed top-0 right-0 left-0 flex items-center gap-3"
     :style="{
       height: 'var(--zima-topbar-height)',
-      background: 'var(--zima-bg-base)',
-      borderBottom: '1px solid var(--zima-border-default)',
+      background: scrolled ? 'var(--zima-topbar-bg-scrolled)' : 'transparent',
+      backdropFilter: scrolled ? 'var(--zima-topbar-blur)' : 'none',
+      WebkitBackdropFilter: scrolled ? 'var(--zima-topbar-blur)' : 'none',
+      borderBottom: scrolled ? '1px solid var(--zima-border-default)' : '1px solid transparent',
       zIndex: 'var(--zima-z-topbar)',
-      paddingLeft: '16px',
-      paddingRight: '16px',
+      paddingLeft: '14px',
+      paddingRight: '14px',
+      transition: 'var(--zima-topbar-transition)',
     }"
     data-testid="zima-topbar"
   >
     <!-- Mobile hamburger (visible <lg) -->
     <button
-      class="lg:hidden flex items-center justify-center rounded-md"
-      style="width:32px; height:32px; background:var(--zima-bg-surface-2); border:1px solid var(--zima-border-default); color:var(--zima-text-secondary); flex-shrink:0;"
+      class="lg:hidden flex items-center justify-center rounded-lg transition-all"
+      :style="{
+        width: '32px', height: '32px',
+        background: 'var(--zima-bg-surface-2)',
+        border: '1px solid var(--zima-border-default)',
+        color: 'var(--zima-text-secondary)',
+        flexShrink: '0',
+        transitionDuration: '150ms',
+      }"
       aria-label="Abrir menu"
       @click="toggleSidebarMobile"
+      @mouseenter="(e: MouseEvent) => {
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'
+        ;(e.currentTarget as HTMLElement).style.color = 'var(--zima-text-primary)'
+      }"
+      @mouseleave="(e: MouseEvent) => {
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'
+        ;(e.currentTarget as HTMLElement).style.color = 'var(--zima-text-secondary)'
+      }"
     >
-      <Icon name="i-lucide-menu" style="width:16px; height:16px;" />
+      <Icon name="i-lucide-menu" style="width:15px; height:15px;" />
     </button>
 
-    <!-- Left: Breadcrumbs (full em md+, só último em mobile) -->
+    <!-- Left: Breadcrumbs -->
     <nav
       v-if="breadcrumbs.length"
       aria-label="Breadcrumb"
@@ -111,34 +145,45 @@ const { toggleSidebarMobile } = useSaasLayout()
     >
       <!-- Mobile: só o último segmento -->
       <span
-        class="flex md:hidden text-xs truncate"
+        class="flex md:hidden text-xs truncate font-medium"
         :style="{ color: 'var(--zima-text-secondary)' }"
       >
         {{ breadcrumbs[breadcrumbs.length - 1]?.label }}
       </span>
-      <!-- Desktop: breadcrumbs completos -->
-      <ol class="hidden md:flex items-center gap-1 text-xs" style="color: var(--zima-text-muted);">
+      <!-- Desktop: breadcrumbs com chevron -->
+      <ol class="hidden md:flex items-center gap-0.5" style="color: var(--zima-text-muted);">
         <li
           v-for="(crumb, idx) in breadcrumbs"
           :key="idx"
-          class="flex items-center gap-1 min-w-0"
+          class="flex items-center gap-0.5 min-w-0"
         >
-          <span
+          <!-- Separador chevron (exceto o primeiro) -->
+          <Icon
             v-if="idx > 0"
+            name="i-lucide-chevron-right"
+            :style="{
+              width: '11px', height: '11px',
+              color: 'var(--zima-text-disabled)',
+              strokeWidth: '1.5px',
+              flexShrink: '0',
+            }"
             aria-hidden="true"
-            style="color: var(--zima-text-disabled);"
-          >/</span>
+          />
           <a
             v-if="crumb.to && idx < breadcrumbs.length - 1"
             :href="crumb.to"
-            class="hover:text-[var(--zima-text-secondary)] transition-colors duration-[150ms] truncate"
+            class="text-xs truncate transition-colors duration-[150ms] hover:text-[var(--zima-text-secondary)]"
+            :style="{ color: 'var(--zima-text-muted)' }"
           >
             {{ crumb.label }}
           </a>
           <span
             v-else
-            class="truncate"
-            :style="idx === breadcrumbs.length - 1 ? { color: 'var(--zima-text-secondary)' } : {}"
+            class="text-xs truncate"
+            :style="{
+              color: idx === breadcrumbs.length - 1 ? 'var(--zima-text-secondary)' : 'var(--zima-text-muted)',
+              fontWeight: idx === breadcrumbs.length - 1 ? '500' : '400',
+            }"
             :aria-current="idx === breadcrumbs.length - 1 ? 'page' : undefined"
           >
             {{ crumb.label }}
@@ -150,64 +195,78 @@ const { toggleSidebarMobile } = useSaasLayout()
 
     <!-- Mobile search icon (visible <md) -->
     <button
-      class="flex md:hidden items-center justify-center rounded-md"
-      style="width:32px; height:32px; background:var(--zima-bg-surface-2); border:1px solid var(--zima-border-default); color:var(--zima-text-secondary); flex-shrink:0;"
+      class="flex md:hidden items-center justify-center rounded-lg transition-all"
+      :style="{
+        width: '32px', height: '32px',
+        background: 'var(--zima-bg-surface-2)',
+        border: '1px solid var(--zima-border-default)',
+        color: 'var(--zima-text-secondary)',
+        flexShrink: '0',
+      }"
       aria-label="Abrir busca global"
       @click="openCommandPalette"
     >
-      <Icon name="i-lucide-search" style="width:15px; height:15px;" />
+      <Icon name="i-lucide-search" style="width:14px; height:14px;" />
     </button>
 
-    <!-- Center: Global Search (Command Palette trigger) — oculto em telas estreitas -->
+    <!-- Center: Global Search -->
     <button
-      class="hidden md:flex items-center gap-2 rounded-md px-3 transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
+      class="hidden md:flex items-center gap-2 rounded-lg px-3 focus-visible:outline-none focus-visible:ring-2 group"
       :style="{
         height: '32px',
         background: 'var(--zima-bg-surface-2)',
         border: '1px solid var(--zima-border-default)',
         color: 'var(--zima-text-muted)',
-        minWidth: '200px',
-        maxWidth: '320px',
+        width: '220px',
+        transition: 'width 200ms ease, border-color 150ms ease',
         '--tw-ring-color': 'var(--zima-focus-outline)',
+        flexShrink: '0',
       }"
       aria-label="Abrir busca global (Ctrl+K)"
       @click="openCommandPalette"
       @mouseenter="(e: MouseEvent) => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-hover)'
+        (e.currentTarget as HTMLElement).style.width = '280px'
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-active)'
       }"
       @mouseleave="(e: MouseEvent) => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'
+        (e.currentTarget as HTMLElement).style.width = '220px'
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'
       }"
     >
-      <Icon name="i-lucide-search" style="width: 14px; height: 14px;" aria-hidden="true" />
-      <span style="font-size: 13px;">Buscar...</span>
+      <Icon name="i-lucide-search" style="width: 12px; height: 12px; flex-shrink: 0; opacity: 0.7;" aria-hidden="true" />
+      <span style="font-size: 12px; flex: 1; text-align: left; opacity: 0.6;">Pesquisar ou ir para...</span>
       <kbd
-        class="ml-auto flex items-center gap-0.5 rounded px-1"
+        class="flex items-center rounded px-1.5 flex-shrink-0 transition-opacity"
         :style="{
           fontSize: '10px',
           fontFamily: 'var(--zima-font-mono)',
           background: 'var(--zima-bg-surface-3)',
           color: 'var(--zima-text-disabled)',
-          border: '1px solid var(--zima-border-default)',
+          border: '1px solid var(--zima-border-divider)',
           height: '18px',
           lineHeight: '1',
+          letterSpacing: '0.02em',
+          opacity: '0.5',
+          transition: 'opacity 150ms ease',
         }"
         aria-label="Atalho Ctrl K"
       >
-        <span>⌘</span><span>K</span>
+        <span>⌘K</span>
       </kbd>
     </button>
 
     <!-- Right: Actions -->
-    <div class="flex items-center gap-2" data-topbar-menu>
+    <div class="flex items-center gap-1.5" data-topbar-menu>
+
       <!-- Notifications -->
       <div class="relative">
         <button
-          class="relative flex items-center justify-center rounded-md transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
+          class="relative flex items-center justify-center rounded-lg transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
           :style="{
             width: '32px',
             height: '32px',
-            color: 'var(--zima-text-secondary)',
+            color: notificationsOpen ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
+            background: notificationsOpen ? 'var(--zima-bg-surface-2)' : 'transparent',
             '--tw-ring-color': 'var(--zima-focus-outline)',
           }"
           :aria-label="`Notificações${unreadCount ? ` (${unreadCount} não lidas)` : ''}`"
@@ -215,17 +274,23 @@ const { toggleSidebarMobile } = useSaasLayout()
           :aria-haspopup="true"
           @click.stop="notificationsOpen = !notificationsOpen; userMenuOpen = false"
           @mouseenter="(e: MouseEvent) => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-2)'
+            if (!notificationsOpen) {
+              (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-2)'
+              ;(e.currentTarget as HTMLElement).style.color = 'var(--zima-text-primary)'
+            }
           }"
           @mouseleave="(e: MouseEvent) => {
-            (e.currentTarget as HTMLElement).style.background = ''
+            if (!notificationsOpen) {
+              (e.currentTarget as HTMLElement).style.background = 'transparent'
+              ;(e.currentTarget as HTMLElement).style.color = 'var(--zima-text-muted)'
+            }
           }"
         >
-          <Icon name="i-lucide-bell" style="width: 16px; height: 16px; stroke-width: 1.5px;" aria-hidden="true" />
-          <!-- Unread badge -->
+          <Icon name="i-lucide-bell" style="width: 15px; height: 15px; stroke-width: 1.5px;" aria-hidden="true" />
+          <!-- Unread badge com pulse -->
           <span
             v-if="unreadCount > 0"
-            class="absolute top-1 right-1 flex items-center justify-center rounded-full"
+            class="absolute top-0.5 right-0.5 flex items-center justify-center rounded-full"
             :style="{
               minWidth: '14px',
               height: '14px',
@@ -234,7 +299,8 @@ const { toggleSidebarMobile } = useSaasLayout()
               fontWeight: '700',
               background: 'var(--zima-danger)',
               color: '#fff',
-              transform: 'translate(25%, -25%)',
+              transform: 'translate(30%, -30%)',
+              animation: 'zima-badge-pulse 2.5s ease-in-out infinite',
             }"
             :aria-hidden="true"
           >
@@ -246,13 +312,13 @@ const { toggleSidebarMobile } = useSaasLayout()
         <Transition name="zima-dropdown">
           <div
             v-if="notificationsOpen"
-            class="absolute right-0 top-full mt-2 rounded-lg overflow-hidden"
+            class="absolute right-0 top-full mt-2 rounded-xl overflow-hidden"
             :style="{
-              width: 'min(380px, calc(100vw - 32px))',
+              width: 'min(360px, calc(100vw - 32px))',
               maxWidth: 'calc(100vw - 32px)',
               background: 'var(--zima-bg-surface-3)',
               border: '1px solid var(--zima-border-modal)',
-              boxShadow: 'var(--zima-shadow-dropdown)',
+              boxShadow: 'var(--zima-shadow-lg)',
               zIndex: 'var(--zima-z-dropdown)',
             }"
             role="dialog"
@@ -263,24 +329,37 @@ const { toggleSidebarMobile } = useSaasLayout()
               class="flex items-center justify-between px-4 py-3"
               :style="{ borderBottom: '1px solid var(--zima-border-divider)' }"
             >
-              <span
-                class="text-sm font-semibold"
-                :style="{ color: 'var(--zima-text-primary)' }"
-              >
-                Notificações
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold" :style="{ color: 'var(--zima-text-primary)' }">
+                  Notificações
+                </span>
+                <span
+                  v-if="unreadCount > 0"
+                  class="inline-flex items-center justify-center rounded-full"
+                  :style="{
+                    minWidth: '18px', height: '18px', padding: '0 5px',
+                    fontSize: '10px', fontWeight: '700',
+                    background: 'var(--zima-danger-subtle)',
+                    color: 'var(--zima-danger)',
+                  }"
+                >
+                  {{ unreadCount }}
+                </span>
+              </div>
               <button
                 v-if="unreadCount > 0"
-                class="text-xs transition-colors duration-[150ms]"
-                :style="{ color: 'var(--zima-blue-light)' }"
+                class="text-xs transition-all duration-[150ms]"
+                :style="{ color: 'var(--zima-blue-light)', opacity: '0.8' }"
                 @click="emit('mark-all-read')"
+                @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.opacity = '1'"
+                @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.opacity = '0.8'"
               >
-                Marcar todas como lidas
+                Marcar como lidas
               </button>
             </div>
 
             <!-- Notification list -->
-            <div class="max-h-80 overflow-y-auto">
+            <div class="overflow-y-auto" style="max-height: 360px;">
               <template v-if="notifications.length">
                 <button
                   v-for="notif in notifications"
@@ -291,19 +370,14 @@ const { toggleSidebarMobile } = useSaasLayout()
                     borderBottom: '1px solid var(--zima-border-divider)',
                   }"
                   @click="emit('notification-click', notif)"
-                  @mouseenter="(e: MouseEvent) => {
-                    (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-hover)'
-                  }"
-                  @mouseleave="(e: MouseEvent) => {
-                    (e.currentTarget as HTMLElement).style.background = notif.read ? '' : 'var(--zima-blue-subtle)'
-                  }"
+                  @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-hover)'"
+                  @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = notif.read ? '' : 'var(--zima-blue-subtle)'"
                 >
                   <div
-                    class="flex items-center justify-center rounded-full shrink-0 mt-0.5"
+                    class="flex items-center justify-center rounded-lg shrink-0 mt-0.5"
                     :style="{
-                      width: '28px',
-                      height: '28px',
-                      background: `rgba(${notificationTypeColor[notif.type]}, 0.1)`,
+                      width: '30px', height: '30px',
+                      background: notificationTypeBg[notif.type],
                       color: notificationTypeColor[notif.type],
                     }"
                   >
@@ -317,7 +391,7 @@ const { toggleSidebarMobile } = useSaasLayout()
                   <div class="flex-1 min-w-0">
                     <p
                       class="text-sm font-medium truncate"
-                      :style="{ color: 'var(--zima-text-primary)' }"
+                      :style="{ color: 'var(--zima-text-primary)', letterSpacing: '-0.01em' }"
                     >
                       {{ notif.title }}
                     </p>
@@ -328,92 +402,121 @@ const { toggleSidebarMobile } = useSaasLayout()
                     >
                       {{ notif.description }}
                     </p>
-                    <p
-                      class="text-xs mt-1"
-                      :style="{ color: 'var(--zima-text-muted)' }"
-                    >
+                    <p class="text-xs mt-1" :style="{ color: 'var(--zima-text-muted)' }">
                       {{ notif.time }}
                     </p>
                   </div>
                   <div
                     v-if="!notif.read"
                     class="shrink-0 rounded-full mt-2"
-                    :style="{
-                      width: '6px',
-                      height: '6px',
-                      background: 'var(--zima-blue-core)',
-                    }"
+                    :style="{ width: '6px', height: '6px', background: 'var(--zima-blue-core)' }"
                     aria-hidden="true"
                   />
                 </button>
               </template>
+
+              <!-- Empty state -->
               <div
                 v-else
                 class="flex flex-col items-center justify-center py-10 gap-2"
               >
-                <Icon
-                  name="i-lucide-bell-off"
-                  style="width: 32px; height: 32px;"
-                  :style="{ color: 'var(--zima-text-muted)' }"
-                  aria-hidden="true"
-                />
-                <p class="text-sm" :style="{ color: 'var(--zima-text-muted)' }">
-                  Nenhuma notificação
-                </p>
+                <div
+                  class="flex items-center justify-center rounded-xl"
+                  :style="{
+                    width: '48px', height: '48px',
+                    background: 'var(--zima-success-subtle)',
+                    marginBottom: '4px',
+                  }"
+                >
+                  <Icon name="i-lucide-check-circle" style="width: 22px; height: 22px;" :style="{ color: 'var(--zima-success)' }" />
+                </div>
+                <p class="text-sm font-medium" :style="{ color: 'var(--zima-text-primary)' }">Tudo em dia!</p>
+                <p class="text-xs" :style="{ color: 'var(--zima-text-muted)' }">Sem notificações pendentes</p>
               </div>
             </div>
           </div>
         </Transition>
       </div>
 
+      <!-- Divider vertical -->
+      <div
+        class="hidden md:block"
+        :style="{
+          width: '1px', height: '20px',
+          background: 'var(--zima-border-divider)',
+          margin: '0 2px',
+        }"
+        aria-hidden="true"
+      />
+
       <!-- User menu -->
       <div class="relative">
         <button
-          class="flex items-center gap-2 rounded-md px-2 py-1 transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
+          class="flex items-center gap-2 rounded-lg px-2 py-1 transition-all duration-[150ms] focus-visible:outline-none focus-visible:ring-2"
           :style="{
+            background: userMenuOpen ? 'var(--zima-bg-surface-2)' : 'transparent',
+            border: userMenuOpen ? '1px solid var(--zima-border-default)' : '1px solid transparent',
             '--tw-ring-color': 'var(--zima-focus-outline)',
+            transitionDuration: '150ms',
           }"
           :aria-label="`Menu do usuário: ${userName}`"
           :aria-expanded="userMenuOpen"
           :aria-haspopup="true"
           @click.stop="userMenuOpen = !userMenuOpen; notificationsOpen = false"
           @mouseenter="(e: MouseEvent) => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-2)'
+            if (!userMenuOpen) {
+              (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-2)'
+              ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--zima-border-default)'
+            }
           }"
           @mouseleave="(e: MouseEvent) => {
-            (e.currentTarget as HTMLElement).style.background = ''
+            if (!userMenuOpen) {
+              (e.currentTarget as HTMLElement).style.background = 'transparent'
+              ;(e.currentTarget as HTMLElement).style.borderColor = 'transparent'
+            }
           }"
         >
-          <!-- Avatar -->
+          <!-- Avatar com gradiente -->
           <div
             v-if="userAvatar"
             class="rounded-full overflow-hidden shrink-0"
-            style="width: 32px; height: 32px;"
+            style="width: 28px; height: 28px;"
           >
-            <NuxtImg :src="userAvatar" :alt="userName" width="32" height="32" class="w-full h-full object-cover" />
+            <NuxtImg :src="userAvatar" :alt="userName" width="28" height="28" class="w-full h-full object-cover" />
           </div>
           <div
             v-else
-            class="flex items-center justify-center rounded-full shrink-0 text-xs font-semibold"
+            class="flex items-center justify-center rounded-full shrink-0 text-xs font-bold"
             :style="{
-              width: '32px',
-              height: '32px',
-              background: 'var(--zima-avatar-fallback-bg)',
-              color: 'var(--zima-avatar-fallback-color)',
+              width: '28px',
+              height: '28px',
+              background: 'var(--zima-gradient-primary)',
+              color: '#fff',
+              letterSpacing: '0.02em',
+              fontSize: '11px',
             }"
             aria-hidden="true"
           >
             {{ userInitials }}
           </div>
 
+          <!-- Primeiro nome (desktop only) -->
+          <span
+            class="hidden md:block text-sm font-medium"
+            :style="{ color: 'var(--zima-text-secondary)', letterSpacing: '-0.01em' }"
+          >
+            {{ firstName }}
+          </span>
+
           <Icon
             name="i-lucide-chevron-down"
             :style="{
-              width: '14px',
-              height: '14px',
+              width: '12px',
+              height: '12px',
               color: 'var(--zima-text-muted)',
               transform: userMenuOpen ? 'rotate(180deg)' : '',
               transition: 'transform 150ms ease',
+              flexShrink: '0',
             }"
             aria-hidden="true"
           />
@@ -423,44 +526,72 @@ const { toggleSidebarMobile } = useSaasLayout()
         <Transition name="zima-dropdown">
           <div
             v-if="userMenuOpen"
-            class="absolute right-0 top-full mt-2 rounded-lg overflow-hidden"
+            class="absolute right-0 top-full mt-2 rounded-xl overflow-hidden"
             :style="{
-              width: 'min(200px, calc(100vw - 32px))',
+              width: 'min(220px, calc(100vw - 32px))',
               maxWidth: 'calc(100vw - 32px)',
               background: 'var(--zima-bg-surface-3)',
               border: '1px solid var(--zima-border-modal)',
-              boxShadow: 'var(--zima-shadow-dropdown)',
+              boxShadow: 'var(--zima-shadow-lg)',
               zIndex: 'var(--zima-z-dropdown)',
             }"
             role="menu"
           >
-            <!-- User info -->
+            <!-- User info header -->
             <div
-              class="px-4 py-3"
+              class="flex items-center gap-3 px-4 py-3.5"
               :style="{ borderBottom: '1px solid var(--zima-border-divider)' }"
             >
-              <p class="text-sm font-medium truncate" :style="{ color: 'var(--zima-text-primary)' }">
-                {{ userName }}
-              </p>
-              <p class="text-xs truncate mt-0.5" :style="{ color: 'var(--zima-text-muted)' }">
-                {{ userRole }}
-              </p>
+              <!-- Avatar grande -->
+              <div
+                class="flex items-center justify-center rounded-full shrink-0 font-bold"
+                :style="{
+                  width: '36px', height: '36px',
+                  background: 'var(--zima-gradient-primary)',
+                  color: '#fff',
+                  fontSize: '13px',
+                  letterSpacing: '0.02em',
+                }"
+              >
+                {{ userInitials }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <p
+                  class="text-sm font-semibold truncate"
+                  :style="{ color: 'var(--zima-text-primary)', letterSpacing: '-0.01em' }"
+                >
+                  {{ userName }}
+                </p>
+                <span
+                  class="inline-flex items-center rounded-full px-1.5 mt-0.5"
+                  :style="{
+                    height: '16px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    background: 'var(--zima-bg-surface-hover)',
+                    color: 'var(--zima-text-muted)',
+                    border: '1px solid var(--zima-border-default)',
+                  }"
+                >
+                  {{ userRole }}
+                </span>
+              </div>
             </div>
 
             <!-- Menu items -->
             <div class="py-1">
               <button
                 v-for="item in [
-                  { label: 'Meu Perfil', icon: 'i-lucide-user', action: 'profile' },
-                  { label: 'Configurações', icon: 'i-lucide-settings', action: 'settings' },
+                  { label: 'Meu Perfil', icon: 'i-lucide-user-circle', action: 'profile' },
+                  { label: 'Configurações', icon: 'i-lucide-settings-2', action: 'settings' },
                 ]"
                 :key="item.action"
-                class="w-full flex items-center gap-3 px-4 text-sm transition-colors duration-[150ms] focus-visible:outline-none"
-                :style="{ height: '36px', color: 'var(--zima-text-secondary)' }"
+                class="w-full flex items-center gap-3 px-4 transition-colors duration-[150ms] focus-visible:outline-none"
+                :style="{ height: '36px', color: 'var(--zima-text-secondary)', fontSize: '13px' }"
                 role="menuitem"
                 @click="emit(item.action as 'profile' | 'settings')"
                 @mouseenter="(e: MouseEvent) => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--zima-blue-subtle)'
+                  (e.currentTarget as HTMLElement).style.background = 'var(--zima-bg-surface-hover)'
                   ;(e.currentTarget as HTMLElement).style.color = 'var(--zima-text-primary)'
                 }"
                 @mouseleave="(e: MouseEvent) => {
@@ -468,7 +599,7 @@ const { toggleSidebarMobile } = useSaasLayout()
                   ;(e.currentTarget as HTMLElement).style.color = 'var(--zima-text-secondary)'
                 }"
               >
-                <Icon :name="item.icon" style="width: 14px; height: 14px;" aria-hidden="true" />
+                <Icon :name="item.icon" style="width: 14px; height: 14px; stroke-width: 1.5px;" aria-hidden="true" />
                 {{ item.label }}
               </button>
             </div>
@@ -478,19 +609,15 @@ const { toggleSidebarMobile } = useSaasLayout()
               :style="{ borderTop: '1px solid var(--zima-border-divider)' }"
             >
               <button
-                class="w-full flex items-center gap-3 px-4 text-sm transition-colors duration-[150ms] focus-visible:outline-none"
-                :style="{ height: '36px', color: 'var(--zima-danger)' }"
+                class="w-full flex items-center gap-3 px-4 transition-colors duration-[150ms] focus-visible:outline-none"
+                :style="{ height: '36px', color: 'var(--zima-danger)', fontSize: '13px' }"
                 role="menuitem"
                 @click="emit('logout')"
-                @mouseenter="(e: MouseEvent) => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--zima-danger-subtle)'
-                }"
-                @mouseleave="(e: MouseEvent) => {
-                  (e.currentTarget as HTMLElement).style.background = ''
-                }"
+                @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = 'var(--zima-danger-subtle)'"
+                @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.background = ''"
               >
-                <Icon name="i-lucide-log-out" style="width: 14px; height: 14px;" aria-hidden="true" />
-                Sair
+                <Icon name="i-lucide-log-out" style="width: 14px; height: 14px; stroke-width: 1.5px;" aria-hidden="true" />
+                Sair da conta
               </button>
             </div>
           </div>
@@ -509,5 +636,10 @@ const { toggleSidebarMobile } = useSaasLayout()
 }
 .zima-dropdown-leave-to {
   opacity: 0;
+}
+
+@keyframes zima-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  50%       { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
 }
 </style>

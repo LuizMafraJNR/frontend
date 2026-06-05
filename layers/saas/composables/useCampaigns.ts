@@ -41,7 +41,8 @@ const dt = (daysAgo: number): string => {
   return d.toISOString()
 }
 
-const campaigns = ref<Campaign[]>([
+// Singleton persistido — SSR-safe (ver useMockPersistence).
+const campaigns = persistedRef<Campaign[]>('campaigns:list', () => [
   {
     id: 'camp-1',
     name: 'Promoção de Abril — Coloração',
@@ -230,5 +231,21 @@ export const useCampaigns = () => {
     return campaigns.value.find(c => c.id === id)
   }
 
-  return { campaigns, addCampaign, sendCampaign, scheduleCampaign, updateCampaign, deleteCampaign, getCampaign }
+  /**
+   * Atribui uma conversão a uma campanha pelo código de cupom (integração PDV →
+   * Campanhas). Incrementa metrics.converted da campanha enviada correspondente.
+   * Retorna a campanha convertida (ou null se o cupom não casar).
+   */
+  const applyCoupon = (code: string): Campaign | null => {
+    const clean = code.trim().toUpperCase()
+    if (!clean) return null
+    const camp = campaigns.value.find(
+      c => c.couponCode?.toUpperCase() === clean && (c.status === 'sent' || c.status === 'sending'),
+    )
+    if (!camp) return null
+    camp.metrics.converted += 1
+    return camp
+  }
+
+  return { campaigns, addCampaign, sendCampaign, scheduleCampaign, updateCampaign, deleteCampaign, getCampaign, applyCoupon }
 }

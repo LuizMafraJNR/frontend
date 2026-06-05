@@ -11,10 +11,11 @@ const router = useRouter()
 const {
   transactions, receivables, payables, commissions, monthlyData, dreData, loading,
   fetchAll, cancelTransaction, addTransaction,
-  markReceivableReceived, cancelReceivable,
-  markPayablePaid, cancelPayable,
+  markReceivableReceived, cancelReceivable, addReceivable,
+  markPayablePaid, cancelPayable, addPayable,
   payCommission,
   kpiIncome, kpiExpenses, kpiProfit, kpiReceivable, kpiPayable,
+  cashflowForecast,
 } = useFinancial()
 
 onMounted(() => fetchAll())
@@ -331,6 +332,49 @@ const openPayCommission = (entry: CommissionEntry) => {
   payingCommission.value = entry
   payCommissionOpen.value = true
 }
+
+// ── Novo lançamento (a receber / a pagar) ─────────────────────────────────────
+const lancamentoOpen = ref(false)
+const lancamentoTipo = ref<'receber' | 'pagar'>('receber')
+const lancamentoSaving = ref(false)
+const lancForm = reactive({ description: '', amount: 0, dueDate: '', counterpart: '' })
+
+const openNovoLancamento = (tipo: 'receber' | 'pagar') => {
+  lancamentoTipo.value = tipo
+  Object.assign(lancForm, { description: '', amount: 0, dueDate: new Date().toISOString().slice(0, 10), counterpart: '' })
+  lancamentoOpen.value = true
+}
+
+const confirmNovoLancamento = async () => {
+  if (!lancForm.description.trim() || lancForm.amount <= 0 || !lancForm.dueDate) {
+    toast.warning('Preencha descrição, valor e vencimento')
+    return
+  }
+  lancamentoSaving.value = true
+  await new Promise(r => setTimeout(r, 400))
+  if (lancamentoTipo.value === 'receber') {
+    addReceivable({
+      description: lancForm.description.trim(),
+      amount: lancForm.amount,
+      dueDate: lancForm.dueDate,
+      status: 'PENDING',
+      category: 'SERVICE',
+      clientName: lancForm.counterpart.trim() || undefined,
+    })
+  } else {
+    addPayable({
+      description: lancForm.description.trim(),
+      amount: lancForm.amount,
+      dueDate: lancForm.dueDate,
+      status: 'PENDING',
+      category: 'OTHER',
+      supplierName: lancForm.counterpart.trim() || undefined,
+    })
+  }
+  lancamentoSaving.value = false
+  lancamentoOpen.value = false
+  toast.success(lancamentoTipo.value === 'receber' ? 'Conta a receber criada' : 'Conta a pagar criada')
+}
 const confirmPayCommission = async () => {
   if (!payingCommission.value) return
   payCommissionLoading.value = true
@@ -470,23 +514,22 @@ const payMethodSelectOptions = [
   <div class="flex flex-col gap-6" data-testid="page-financeiro">
 
     <!-- ── Header ──────────────────────────────────────────────────────────── -->
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <h1 style="font-size: 22px; font-weight: 700; color: var(--zima-text-primary); margin: 0;">Financeiro</h1>
-        <p style="font-size: 13px; color: var(--zima-text-muted); margin-top: 2px;">
-          Visão completa de receitas, despesas e comissões
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
+    <ZimaPageHeader title="Financeiro" description="Visão completa de receitas, despesas e comissões">
+      <template #actions>
         <!-- Period selector -->
-        <div class="flex items-center gap-1 rounded-lg p-1" style="background: var(--zima-bg-surface-2); border: 1px solid var(--zima-border-default);">
+        <div
+          class="flex items-center gap-0.5 p-1 rounded-lg"
+          :style="{ background: 'var(--zima-bg-surface-2)', border: '1px solid var(--zima-border-default)' }"
+        >
           <button
             v-for="p in PERIODS.slice(0, 5)"
             :key="p.value"
-            style="padding: 4px 10px; font-size: 12px; font-weight: 500; border: none; cursor: pointer; border-radius: 6px; transition: all 120ms;"
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
             :style="{
+              transitionDuration: 'var(--zima-duration-base)',
               background: selectedPeriod === p.value ? 'var(--zima-bg-surface-3)' : 'transparent',
               color: selectedPeriod === p.value ? 'var(--zima-text-primary)' : 'var(--zima-text-muted)',
+              border: 'none', cursor: 'pointer',
             }"
             @click="selectedPeriod = p.value"
           >
@@ -494,36 +537,18 @@ const payMethodSelectOptions = [
           </button>
         </div>
         <ZimaButton size="sm" @click="openNewIncome">
-          <template #icon-left>
-            <Icon name="i-lucide-plus" style="width: 14px; height: 14px;" />
-          </template>
+          <template #icon-left><Icon name="i-lucide-arrow-up" style="width: 14px; height: 14px;" /></template>
           Receita
         </ZimaButton>
         <ZimaButton size="sm" variant="ghost" @click="openNewExpense">
-          <template #icon-left>
-            <Icon name="i-lucide-minus" style="width: 14px; height: 14px;" />
-          </template>
+          <template #icon-left><Icon name="i-lucide-arrow-down" style="width: 14px; height: 14px;" /></template>
           Despesa
         </ZimaButton>
-      </div>
-    </div>
-
-    <!-- ── Sub-tabs ────────────────────────────────────────────────────────── -->
-    <div style="border-bottom: 1px solid var(--zima-border-divider); display: flex; gap: 4px;">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        style="padding: 10px 16px; font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 150ms; white-space: nowrap;"
-        :style="{
-          color: activeTab === tab.key ? 'var(--zima-blue-core)' : 'var(--zima-text-muted)',
-          borderBottomColor: activeTab === tab.key ? 'var(--zima-blue-core)' : 'transparent',
-          marginBottom: '-1px',
-        }"
-        @click="activeTab = tab.key as TabKey"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
+      </template>
+      <template #tabs>
+        <ZimaSubTabs v-model="activeTab" :tabs="tabs" />
+      </template>
+    </ZimaPageHeader>
 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <!-- TAB: Visão Geral -->
@@ -531,17 +556,17 @@ const payMethodSelectOptions = [
     <template v-if="activeTab === 'overview'">
 
       <!-- KPI Cards 5 columns -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Receita -->
         <div
-          style="padding: 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
+          style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
           @click="activeTab = 'receitas'"
         >
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted);">RECEITA</span>
             <Icon name="i-lucide-trending-up" style="width: 14px; height: 14px; color: #10B981;" />
           </div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #10B981; margin-bottom: 4px;">
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: #10B981; margin-bottom: 4px;">
             {{ formatCurrency(kpiIncome) }}
           </div>
           <ZimaBadge variant="success" size="sm">+{{ kpiChange(kpiIncome, prevIncome) }}% vs anterior</ZimaBadge>
@@ -549,26 +574,26 @@ const payMethodSelectOptions = [
 
         <!-- Despesas -->
         <div
-          style="padding: 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
+          style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
           @click="activeTab = 'despesas'"
         >
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted);">DESPESAS</span>
             <Icon name="i-lucide-trending-down" style="width: 14px; height: 14px; color: #EF4444;" />
           </div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #EF4444; margin-bottom: 4px;">
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: #EF4444; margin-bottom: 4px;">
             {{ formatCurrency(kpiExpenses) }}
           </div>
           <ZimaBadge variant="danger" size="sm">+{{ kpiChange(kpiExpenses, prevExpenses) }}% vs anterior</ZimaBadge>
         </div>
 
         <!-- Lucro -->
-        <div style="padding: 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <div style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted);">LUCRO LÍQUIDO</span>
             <Icon name="i-lucide-dollar-sign" style="width: 14px; height: 14px; color: var(--zima-text-muted);" />
           </div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: var(--zima-text-primary); margin-bottom: 4px;">
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: var(--zima-text-primary); margin-bottom: 4px;">
             {{ formatCurrency(kpiProfit) }}
           </div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-bottom: 4px;">
@@ -584,15 +609,15 @@ style="height: 100%; background: #10B981; border-radius: 99px; transition: width
 
         <!-- Contas a Receber -->
         <div
-          style="padding: 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
-          :style="{ borderLeftWidth: '3px', borderLeftColor: overdueRecebiveis.length > 0 ? '#EF4444' : 'var(--zima-border-default)' }"
+          style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
+          :style="{ borderLeftWidth: '3px', borderLeftColor: overdueRecebiveis.length > 0 ? 'var(--zima-danger)' : 'var(--zima-border-default)' }"
           @click="activeTab = 'receber'"
         >
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted);">A RECEBER</span>
             <Icon name="i-lucide-clock" style="width: 14px; height: 14px; color: #F59E0B;" />
           </div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #F59E0B; margin-bottom: 4px;">
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: #F59E0B; margin-bottom: 4px;">
             {{ formatCurrency(kpiReceivable) }}
           </div>
           <div style="font-size: 11px; color: var(--zima-text-muted);">
@@ -603,20 +628,48 @@ style="height: 100%; background: #10B981; border-radius: 99px; transition: width
 
         <!-- Contas a Pagar -->
         <div
-          style="padding: 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
-          :style="{ borderLeftWidth: '3px', borderLeftColor: overduePayables.length > 0 ? '#EF4444' : 'var(--zima-border-default)' }"
+          style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); cursor: pointer;"
+          :style="{ borderLeftWidth: '3px', borderLeftColor: overduePayables.length > 0 ? 'var(--zima-danger)' : 'var(--zima-border-default)' }"
           @click="activeTab = 'pagar'"
         >
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted);">A PAGAR</span>
             <Icon name="i-lucide-calendar-clock" style="width: 14px; height: 14px; color: #F59E0B;" />
           </div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #F59E0B; margin-bottom: 4px;">
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: #F59E0B; margin-bottom: 4px;">
             {{ formatCurrency(kpiPayable) }}
           </div>
           <div style="font-size: 11px; color: var(--zima-text-muted);">
             {{ pendPayables.length }} pendentes
             <span v-if="nextDuePayable"> • próxima: {{ formatDate(nextDuePayable.dueDate) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fluxo de caixa previsional -->
+      <div style="padding: 20px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <Icon name="i-lucide-line-chart" style="width: 16px; height: 16px; color: var(--zima-blue-core);" />
+          <span style="font-size: 14px; font-weight: 600; color: var(--zima-text-primary);">Fluxo de caixa previsional</span>
+          <span style="font-size: 12px; color: var(--zima-text-muted);">projeção a partir de contas a receber e pagar</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div
+            v-for="f in cashflowForecast"
+            :key="f.days"
+            style="padding: 14px; border-radius: var(--zima-radius-md); border: 1px solid var(--zima-border-default); background: var(--zima-bg-surface-3);"
+          >
+            <div style="font-size: 12px; color: var(--zima-text-muted); margin-bottom: 8px;">Próximos {{ f.days }} dias</div>
+            <div
+              style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; margin-bottom: 6px;"
+              :style="{ color: f.net >= 0 ? 'var(--zima-success)' : 'var(--zima-danger)' }"
+            >
+              {{ f.net >= 0 ? '+' : '' }}{{ formatCurrency(f.net) }}
+            </div>
+            <div style="display: flex; gap: 12px; font-size: 11px;">
+              <span style="color: var(--zima-success);">↑ {{ formatCurrency(f.inflow) }}</span>
+              <span style="color: var(--zima-danger);">↓ {{ formatCurrency(f.outflow) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -708,7 +761,7 @@ style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items
                 :style="{ background: tx.type === 'INCOME' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.10)' }">
                 <Icon
 :name="tx.type === 'INCOME' ? 'i-lucide-arrow-down-left' : 'i-lucide-arrow-up-right'" style="width: 14px; height: 14px;"
-                  :style="{ color: tx.type === 'INCOME' ? '#10B981' : '#EF4444' }" />
+                  :style="{ color: tx.type === 'INCOME' ? 'var(--zima-success)' : 'var(--zima-danger)' }" />
               </div>
               <div style="flex: 1; min-width: 0;">
                 <div style="font-size: 13px; color: var(--zima-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ tx.description }}</div>
@@ -720,9 +773,9 @@ style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items
                 {{ tx.status === 'PAID' ? 'Pago' : tx.status === 'PENDING' ? 'Pendente' : 'Cancelado' }}
               </ZimaBadge>
               <span
-style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; min-width: 100px; text-align: right;"
+style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600; min-width: 100px; text-align: right;"
                 :style="{
-                  color: tx.status === 'CANCELLED' ? 'var(--zima-text-muted)' : tx.type === 'INCOME' ? '#10B981' : '#EF4444',
+                  color: tx.status === 'CANCELLED' ? 'var(--zima-text-muted)' : tx.type === 'INCOME' ? 'var(--zima-success)' : 'var(--zima-danger)',
                   textDecoration: tx.status === 'CANCELLED' ? 'line-through' : 'none',
                 }">
                 {{ tx.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
@@ -741,17 +794,17 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL RECEBIDO</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #10B981;">{{ formatCurrency(kpiIncome) }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #10B981;">{{ formatCurrency(kpiIncome) }}</div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PENDENTE</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #F59E0B;">
             {{ formatCurrency(transactions.filter(t => t.type === 'INCOME' && t.status === 'PENDING').reduce((s, t) => s + t.amount, 0)) }}
           </div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">LANÇAMENTOS</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ filteredReceitas.length }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ filteredReceitas.length }}</div>
         </div>
       </div>
 
@@ -783,7 +836,7 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; 
           @page-change="recPage = $event"
         >
           <template #cell-data="{ row }">
-            <span style="font-size: 12px; color: var(--zima-text-muted); font-family: 'Geist Mono', monospace;">{{ formatDateShort(row.data as string) }}</span>
+            <span style="font-size: 12px; color: var(--zima-text-muted); font-family: var(--zima-font-mono);">{{ formatDateShort(row.data as string) }}</span>
           </template>
           <template #cell-descricao="{ row }">
             <span style="font-size: 13px; color: var(--zima-text-primary); max-width: 200px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.descricao }}</span>
@@ -807,8 +860,8 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; 
           </template>
           <template #cell-valor="{ row }">
             <span
-style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
-              :style="{ color: (row._raw as Transaction).status === 'CANCELLED' ? 'var(--zima-text-muted)' : '#10B981',
+style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600;"
+              :style="{ color: (row._raw as Transaction).status === 'CANCELLED' ? 'var(--zima-text-muted)' : 'var(--zima-success)',
                 textDecoration: (row._raw as Transaction).status === 'CANCELLED' ? 'line-through' : 'none' }">
               +{{ formatCurrency(row.valor as number) }}
             </span>
@@ -830,17 +883,17 @@ style="font-size: 12px; color: var(--zima-blue-core); background: none; border: 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL PAGO</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #EF4444;">{{ formatCurrency(kpiExpenses) }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #EF4444;">{{ formatCurrency(kpiExpenses) }}</div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PENDENTE</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #F59E0B;">
             {{ formatCurrency(transactions.filter(t => t.type === 'EXPENSE' && t.status === 'PENDING').reduce((s, t) => s + t.amount, 0)) }}
           </div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">LANÇAMENTOS</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ filteredDespesas.length }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ filteredDespesas.length }}</div>
         </div>
       </div>
 
@@ -852,7 +905,7 @@ style="font-size: 12px; color: var(--zima-blue-core); background: none; border: 
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
               <span style="font-size: 12px; color: var(--zima-text-secondary);">{{ cat.label }}</span>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--zima-text-primary);">{{ formatCurrency(cat.val) }}</span>
+                <span style="font-family: var(--zima-font-mono); font-size: 12px; color: var(--zima-text-primary);">{{ formatCurrency(cat.val) }}</span>
                 <span style="font-size: 11px; color: var(--zima-text-muted);">{{ cat.pct }}%</span>
               </div>
             </div>
@@ -893,7 +946,7 @@ style="height: 100%; border-radius: 99px; background: #EF4444; opacity: 0.75; tr
           @page-change="despPage = $event"
         >
           <template #cell-data="{ row }">
-            <span style="font-size: 12px; color: var(--zima-text-muted); font-family: 'Geist Mono', monospace;">{{ formatDateShort(row.data as string) }}</span>
+            <span style="font-size: 12px; color: var(--zima-text-muted); font-family: var(--zima-font-mono);">{{ formatDateShort(row.data as string) }}</span>
           </template>
           <template #cell-descricao="{ row }">
             <span style="font-size: 13px; color: var(--zima-text-primary); max-width: 200px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.descricao }}</span>
@@ -914,8 +967,8 @@ style="height: 100%; border-radius: 99px; background: #EF4444; opacity: 0.75; tr
           </template>
           <template #cell-valor="{ row }">
             <span
-style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
-              :style="{ color: (row._raw as Transaction).status === 'CANCELLED' ? 'var(--zima-text-muted)' : '#EF4444',
+style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600;"
+              :style="{ color: (row._raw as Transaction).status === 'CANCELLED' ? 'var(--zima-text-muted)' : 'var(--zima-danger)',
                 textDecoration: (row._raw as Transaction).status === 'CANCELLED' ? 'line-through' : 'none' }">
               -{{ formatCurrency(row.valor as number) }}
             </span>
@@ -937,27 +990,27 @@ style="font-size: 12px; color: var(--zima-blue-core); background: none; border: 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PENDENTE</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiReceivable) }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiReceivable) }}</div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-top: 2px;">{{ pendRecebiveis.length }} parcelas</div>
         </div>
         <div
 style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);"
-          :style="{ borderLeftWidth: '3px', borderLeftColor: overdueRecebiveis.length > 0 ? '#EF4444' : 'transparent' }">
+          :style="{ borderLeftWidth: '3px', borderLeftColor: overdueRecebiveis.length > 0 ? 'var(--zima-danger)' : 'transparent' }">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">VENCIDO</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #EF4444;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #EF4444;">
             {{ formatCurrency(overdueRecebiveis.reduce((s, r) => s + r.amount, 0)) }}
           </div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-top: 2px;">{{ overdueRecebiveis.length }} em atraso</div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">RECEBIDO (MÊS)</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #10B981;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #10B981;">
             {{ formatCurrency(receivables.filter(r => r.status === 'RECEIVED').reduce((s, r) => s + r.amount, 0)) }}
           </div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL LANÇAMENTOS</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ receivables.length }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ receivables.length }}</div>
         </div>
       </div>
 
@@ -967,7 +1020,7 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
 :model-value="recStatusFilter ?? '__all__'" :options="recStatusOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="recStatusFilter = $event === '__all__' ? null : ($event as string)" />
         <div style="flex: 1;" />
-        <ZimaButton size="sm" @click="toast.info('Abrir modal de novo lançamento a receber')">
+        <ZimaButton size="sm" @click="openNovoLancamento('receber')">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 13px; height: 13px;" /></template>
           Novo Lançamento
         </ZimaButton>
@@ -981,8 +1034,8 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
         >
           <template #cell-vencimento="{ row }">
             <span
-              style="font-size: 12px; font-family: 'Geist Mono', monospace;"
-              :style="{ color: (row._raw as Receivable).status === 'OVERDUE' ? '#EF4444' : 'var(--zima-text-muted)' }"
+              style="font-size: 12px; font-family: var(--zima-font-mono);"
+              :style="{ color: (row._raw as Receivable).status === 'OVERDUE' ? 'var(--zima-danger)' : 'var(--zima-text-muted)' }"
             >
               {{ formatDate(row.vencimento as string) }}
               <Icon v-if="(row._raw as Receivable).status === 'OVERDUE'" name="i-lucide-alert-triangle" style="width:10px; height:10px; margin-left:4px; display:inline-block; vertical-align:middle;" />
@@ -1008,7 +1061,7 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
             </ZimaBadge>
           </template>
           <template #cell-valor="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; color: #10B981;">
+            <span style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600; color: #10B981;">
               {{ formatCurrency(row.valor as number) }}
             </span>
           </template>
@@ -1042,21 +1095,21 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PENDENTE</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiPayable) }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(kpiPayable) }}</div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-top: 2px;">{{ pendPayables.length }} contas</div>
         </div>
         <div
 style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);"
-          :style="{ borderLeftWidth: '3px', borderLeftColor: overduePayables.length > 0 ? '#EF4444' : 'transparent' }">
+          :style="{ borderLeftWidth: '3px', borderLeftColor: overduePayables.length > 0 ? 'var(--zima-danger)' : 'transparent' }">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">VENCIDO</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #EF4444;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #EF4444;">
             {{ formatCurrency(overduePayables.reduce((s, p) => s + p.amount, 0)) }}
           </div>
           <div style="font-size: 11px; color: var(--zima-text-muted); margin-top: 2px;">{{ overduePayables.length }} em atraso</div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PAGO (MÊS)</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #10B981;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #10B981;">
             {{ formatCurrency(payables.filter(p => p.status === 'PAID').reduce((s, p) => s + p.amount, 0)) }}
           </div>
         </div>
@@ -1073,7 +1126,7 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
 :model-value="payStatusFilter ?? '__all__'" :options="payStatusOptions" class="w-full sm:w-auto" style="min-width: 140px;"
           @update:model-value="payStatusFilter = $event === '__all__' ? null : ($event as string)" />
         <div style="flex: 1;" />
-        <ZimaButton size="sm" @click="toast.info('Abrir modal de nova conta a pagar')">
+        <ZimaButton size="sm" @click="openNovoLancamento('pagar')">
           <template #icon-left><Icon name="i-lucide-plus" style="width: 13px; height: 13px;" /></template>
           Nova Conta
         </ZimaButton>
@@ -1088,8 +1141,8 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
           <template #cell-vencimento="{ row }">
             <div>
               <span
-                style="font-size: 12px; font-family: 'Geist Mono', monospace;"
-                :style="{ color: (row._raw as Payable).status === 'OVERDUE' ? '#EF4444' : 'var(--zima-text-muted)' }"
+                style="font-size: 12px; font-family: var(--zima-font-mono);"
+                :style="{ color: (row._raw as Payable).status === 'OVERDUE' ? 'var(--zima-danger)' : 'var(--zima-text-muted)' }"
               >
                 {{ formatDate(row.vencimento as string) }}
               </span>
@@ -1118,8 +1171,8 @@ style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: 
           </template>
           <template #cell-valor="{ row }">
             <span
-style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
-              :style="{ color: (row._raw as Payable).status === 'PAID' ? 'var(--zima-text-muted)' : '#EF4444' }">
+style="font-family: var(--zima-font-mono); font-size: 13px; font-weight: 600;"
+              :style="{ color: (row._raw as Payable).status === 'PAID' ? 'var(--zima-text-muted)' : 'var(--zima-danger)' }">
               {{ formatCurrency(row.valor as number) }}
             </span>
           </template>
@@ -1153,19 +1206,19 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">TOTAL A PAGAR</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #F59E0B;">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #F59E0B;">
             {{ formatCurrency(commissions.filter(c => c.status === 'PENDING').reduce((s, c) => s + c.commission, 0)) }}
           </div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">FATURAMENTO TOTAL</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">
             {{ formatCurrency(commissions.reduce((s, c) => s + c.revenue, 0)) }}
           </div>
         </div>
         <div style="padding: 14px 16px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--zima-text-muted); margin-bottom: 6px;">PROFISSIONAIS</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ commissions.length }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: var(--zima-text-primary);">{{ commissions.length }}</div>
         </div>
       </div>
 
@@ -1207,11 +1260,11 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
             </div>
             <div>
               <div style="font-size: 11px; color: var(--zima-text-muted); margin-bottom: 2px;">Faturamento</div>
-              <div style="font-family: 'Geist Mono', monospace; font-size: 16px; font-weight: 700; color: var(--zima-text-primary);">{{ formatCurrency(c.revenue) }}</div>
+              <div style="font-family: var(--zima-font-mono); font-size: 16px; font-weight: 700; color: var(--zima-text-primary);">{{ formatCurrency(c.revenue) }}</div>
             </div>
             <div>
               <div style="font-size: 11px; color: var(--zima-text-muted); margin-bottom: 2px;">Comissão ({{ c.rate }}%)</div>
-              <div style="font-family: 'Geist Mono', monospace; font-size: 18px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(c.commission) }}</div>
+              <div style="font-family: var(--zima-font-mono); font-size: 18px; font-weight: 700; color: #F59E0B;">{{ formatCurrency(c.commission) }}</div>
             </div>
           </div>
 
@@ -1221,7 +1274,7 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
             <div style="display: flex; flex-direction: column; gap: 4px;">
               <div v-for="svc in c.serviceBreakdown" :key="svc.service" style="display: flex; align-items: center; justify-content: space-between;">
                 <span style="font-size: 12px; color: var(--zima-text-secondary);">{{ svc.service }} ({{ svc.count }}×)</span>
-                <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--zima-text-primary);">{{ formatCurrency(svc.revenue) }}</span>
+                <span style="font-family: var(--zima-font-mono); font-size: 12px; color: var(--zima-text-primary);">{{ formatCurrency(svc.revenue) }}</span>
               </div>
             </div>
           </div>
@@ -1261,16 +1314,16 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
             </div>
           </template>
           <template #cell-atendimentos="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-secondary);">{{ row.atendimentos }}</span>
+            <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-secondary);">{{ row.atendimentos }}</span>
           </template>
           <template #cell-faturamento="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-primary);">{{ formatCurrency(row.faturamento as number) }}</span>
+            <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-primary);">{{ formatCurrency(row.faturamento as number) }}</span>
           </template>
           <template #cell-taxa="{ row }">
             <span style="font-size: 13px; color: var(--zima-text-secondary);">{{ row.taxa }}%</span>
           </template>
           <template #cell-comissao="{ row }">
-            <span style="font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 700; color: var(--zima-text-primary);">{{ formatCurrency(row.comissao as number) }}</span>
+            <span style="font-family: var(--zima-font-mono); font-size: 14px; font-weight: 700; color: var(--zima-text-primary);">{{ formatCurrency(row.comissao as number) }}</span>
           </template>
           <template #cell-status="{ row }">
             <ZimaBadge :variant="row.status === 'PAID' ? 'success' : 'warning'" size="sm">
@@ -1296,12 +1349,12 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="activeTab === 'dre'">
       <!-- Header controls -->
-      <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div>
           <h2 style="font-size: 16px; font-weight: 600; color: var(--zima-text-primary); margin: 0;">Demonstrativo de Resultado do Exercício</h2>
           <p style="font-size: 12px; color: var(--zima-text-muted); margin-top: 2px;">Comparativo Abril 2026 vs Março 2026</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--zima-text-secondary);">
             <input v-model="dreCompareMode" type="checkbox" style="width: 14px; height: 14px;" >
             Comparar com mês anterior
@@ -1318,7 +1371,8 @@ style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;"
       </div>
 
       <!-- DRE Table -->
-      <div style="background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); overflow: hidden;">
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+      <div style="background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-lg); border: 1px solid var(--zima-border-default); overflow: hidden; min-width: 480px;">
         <!-- Header row -->
         <div
 style="display: grid; padding: 12px 20px; border-bottom: 1px solid var(--zima-border-default); background: var(--zima-bg-surface-3);"
@@ -1350,7 +1404,7 @@ style="display: grid; padding: 12px 20px; border-bottom: 1px solid var(--zima-bo
               :style="{
                 fontSize: row.isSubtotal ? '13px' : '12px',
                 fontWeight: row.isSubtotal ? '700' : row.type === 'net' ? '800' : '400',
-                color: row.type === 'net' ? (row.current >= 0 ? '#10B981' : '#EF4444')
+                color: row.type === 'net' ? (row.current >= 0 ? 'var(--zima-success)' : 'var(--zima-danger)')
                   : row.isSubtotal ? 'var(--zima-text-primary)' : 'var(--zima-text-secondary)',
               }"
             >{{ row.label }}</span>
@@ -1358,28 +1412,29 @@ style="display: grid; padding: 12px 20px; border-bottom: 1px solid var(--zima-bo
 
           <!-- Current value -->
           <span
-style="text-align: right; font-family: 'Geist Mono', monospace;"
+style="text-align: right; font-family: var(--zima-font-mono);"
             :style="{
               fontSize: row.isSubtotal ? '14px' : '13px',
               fontWeight: row.isSubtotal ? '700' : '400',
-              color: row.type === 'net' ? (row.current >= 0 ? '#10B981' : '#EF4444')
-                : row.type === 'income' || row.isSubtotal ? 'var(--zima-text-primary)' : '#EF4444',
+              color: row.type === 'net' ? (row.current >= 0 ? 'var(--zima-success)' : 'var(--zima-danger)')
+                : row.type === 'income' || row.isSubtotal ? 'var(--zima-text-primary)' : 'var(--zima-danger)',
             }">
             {{ dreMarginMode ? (row.current / 24560 * 100).toFixed(1) + '%' : (row.current >= 0 ? '' : '-') + formatCurrency(Math.abs(row.current)) }}
           </span>
 
           <!-- Previous value -->
-          <span v-if="dreCompareMode" style="text-align: right; font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-muted);">
+          <span v-if="dreCompareMode" style="text-align: right; font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-muted);">
             {{ dreMarginMode ? (row.previous / 17900 * 100).toFixed(1) + '%' : (row.previous >= 0 ? '' : '-') + formatCurrency(Math.abs(row.previous)) }}
           </span>
 
           <!-- Variation -->
           <span
 v-if="dreCompareMode" style="text-align: right; font-size: 12px; font-weight: 600;"
-            :style="{ color: row.current >= row.previous ? '#10B981' : '#EF4444' }">
+            :style="{ color: row.current >= row.previous ? 'var(--zima-success)' : 'var(--zima-danger)' }">
             {{ row.previous !== 0 ? (((row.current - row.previous) / Math.abs(row.previous)) * 100).toFixed(1) + '%' : '—' }}
           </span>
         </div>
+      </div>
       </div>
 
       <!-- DRE note -->
@@ -1408,9 +1463,9 @@ v-if="dreCompareMode" style="text-align: right; font-size: 12px; font-weight: 60
               </ZimaBadge>
             </div>
             <div
-style="font-family: 'Geist Mono', monospace; font-size: 28px; font-weight: 700;"
+style="font-family: var(--zima-font-mono); font-size: 28px; font-weight: 700;"
               :style="{
-                color: drawerTx.status === 'CANCELLED' ? 'var(--zima-text-muted)' : drawerTx.type === 'INCOME' ? '#10B981' : '#EF4444',
+                color: drawerTx.status === 'CANCELLED' ? 'var(--zima-text-muted)' : drawerTx.type === 'INCOME' ? 'var(--zima-success)' : 'var(--zima-danger)',
                 textDecoration: drawerTx.status === 'CANCELLED' ? 'line-through' : 'none',
               }">
               {{ drawerTx.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(drawerTx.amount) }}
@@ -1474,7 +1529,7 @@ v-for="(item, i) in drawerTx.items" :key="i"
                 <span style="font-size: 13px; color: var(--zima-text-primary);">{{ item.name }}</span>
                 <div class="flex items-center gap-3">
                   <span style="font-size: 12px; color: var(--zima-text-muted);">× {{ item.qty }}</span>
-                  <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-primary);">{{ formatCurrency(item.price) }}</span>
+                  <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-primary);">{{ formatCurrency(item.price) }}</span>
                 </div>
               </div>
             </div>
@@ -1547,7 +1602,7 @@ v-if="drawerTx && drawerTx.status !== 'CANCELLED'" variant="danger" size="sm"
       <div v-if="recToMark" class="flex flex-col gap-4">
         <div style="padding: 14px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-md); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 13px; font-weight: 500; color: var(--zima-text-primary); margin-bottom: 4px;">{{ recToMark.description }}</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #10B981;">{{ formatCurrency(recToMark.amount) }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: #10B981;">{{ formatCurrency(recToMark.amount) }}</div>
           <div style="font-size: 12px; color: var(--zima-text-muted); margin-top: 2px;">Vencimento: {{ formatDate(recToMark.dueDate) }}</div>
         </div>
         <div>
@@ -1571,7 +1626,7 @@ v-if="drawerTx && drawerTx.status !== 'CANCELLED'" variant="danger" size="sm"
         <div style="padding: 14px; background: var(--zima-bg-surface-2); border-radius: var(--zima-radius-md); border: 1px solid var(--zima-border-default);">
           <div style="font-size: 13px; font-weight: 500; color: var(--zima-text-primary); margin-bottom: 4px;">{{ payToMark.description }}</div>
           <div v-if="payToMark.supplierName" style="font-size: 12px; color: var(--zima-text-muted); margin-bottom: 4px;">{{ payToMark.supplierName }}</div>
-          <div style="font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 700; color: #EF4444;">{{ formatCurrency(payToMark.amount) }}</div>
+          <div style="font-family: var(--zima-font-mono); font-size: 22px; font-weight: 700; color: #EF4444;">{{ formatCurrency(payToMark.amount) }}</div>
           <div style="font-size: 12px; color: var(--zima-text-muted); margin-top: 2px;">Vencimento: {{ formatDate(payToMark.dueDate) }}</div>
         </div>
         <div>
@@ -1604,7 +1659,7 @@ v-model="payCommissionOpen" title="Confirmar Pagamento de Comissão" size="sm"
         <div class="rounded-lg p-4 flex flex-col gap-2" style="background: var(--zima-bg-surface-2); border: 1px solid var(--zima-border-default);">
           <div class="flex items-center justify-between">
             <span style="font-size: 12px; color: var(--zima-text-muted);">Faturamento gerado</span>
-            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--zima-text-primary);">{{ formatCurrency(payingCommission.revenue) }}</span>
+            <span style="font-family: var(--zima-font-mono); font-size: 13px; color: var(--zima-text-primary);">{{ formatCurrency(payingCommission.revenue) }}</span>
           </div>
           <div class="flex items-center justify-between">
             <span style="font-size: 12px; color: var(--zima-text-muted);">Taxa de comissão</span>
@@ -1612,7 +1667,7 @@ v-model="payCommissionOpen" title="Confirmar Pagamento de Comissão" size="sm"
           </div>
           <div class="flex items-center justify-between pt-2" style="border-top: 1px solid var(--zima-border-divider);">
             <span style="font-size: 13px; font-weight: 600; color: var(--zima-text-primary);">Total a pagar</span>
-            <span style="font-family: 'Geist Mono', monospace; font-size: 20px; font-weight: 700; color: #10B981;">{{ formatCurrency(payingCommission.commission) }}</span>
+            <span style="font-family: var(--zima-font-mono); font-size: 20px; font-weight: 700; color: #10B981;">{{ formatCurrency(payingCommission.commission) }}</span>
           </div>
         </div>
       </div>
@@ -1621,6 +1676,22 @@ v-model="payCommissionOpen" title="Confirmar Pagamento de Comissão" size="sm"
           <ZimaButton variant="ghost" @click="payCommissionOpen = false">Cancelar</ZimaButton>
           <ZimaButton :loading="payCommissionLoading" @click="confirmPayCommission">Confirmar Pagamento</ZimaButton>
         </div>
+      </template>
+    </ZimaModal>
+
+    <!-- Modal: novo lançamento (a receber / a pagar) -->
+    <ZimaModal v-model="lancamentoOpen" :title="lancamentoTipo === 'receber' ? 'Novo lançamento a receber' : 'Nova conta a pagar'" size="sm">
+      <div class="flex flex-col gap-3">
+        <ZimaInput v-model="lancForm.description" label="Descrição" placeholder="Ex.: Pacote de 4 sessões" />
+        <div class="grid grid-cols-2 gap-3">
+          <ZimaInput v-model.number="lancForm.amount" label="Valor (R$)" type="number" />
+          <ZimaInput v-model="lancForm.dueDate" label="Vencimento" type="date" />
+        </div>
+        <ZimaInput v-model="lancForm.counterpart" :label="lancamentoTipo === 'receber' ? 'Cliente (opcional)' : 'Fornecedor (opcional)'" />
+      </div>
+      <template #footer>
+        <ZimaButton variant="ghost" @click="lancamentoOpen = false">Cancelar</ZimaButton>
+        <ZimaButton variant="primary" :loading="lancamentoSaving" @click="confirmNovoLancamento">Criar lançamento</ZimaButton>
       </template>
     </ZimaModal>
 
